@@ -1,7 +1,7 @@
 # incremental mode
 -inc
 -head=full
--workdir=lib/tweb/${hb_compiler}/.hbmk
+-workdir=.hbmk/tweb/${hb_compiler}
 
 # create library
 -hblib

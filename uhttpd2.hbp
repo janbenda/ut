@@ -1,7 +1,7 @@
 # incremental mode
 -inc
 -head=full
--workdir=lib/uhttpd2/${hb_compiler}/.hbmk
+-workdir=.hbmk/uhttpd2/${hb_compiler}
 
 # create library
 -hblib
