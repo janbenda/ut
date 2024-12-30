@@ -1,0 +1,171 @@
+14/12/2024 Vrs. 1.3
+24/11/2024 Replace lib\tweb\notify 
+22/11/2024 Add clause GET ... BUTTON ... RETURN
+20/11/2024 Add clause class, style to CARD HERADER, BODY, FOOTER
+10/11/2024 * Support WebSockets !  -> Check sample.app\ws
+10/11/2024 Update uhttpd2.lib to V1.15
+09/11/2024 * Add new control progress. Check sample\html\controls\progress.html 	
+29/10/2024 Update uhttpd2.tabulator.js. Check sample.app\browse_combo
+17/10/2024 Update uhttpd2.lib to V1.14a  
+05/10/2024 OAuth2 authentication example, Check \sample.app\oauth2
+15/07/2024 Vrs. 1.2 
+14/07/2024 Great changes to the menu system
+	* SIDEBAR Clause Obsolete. For compatibility reasons it does not affect whether it is declared
+	* BURGUERLEFT Clause Obsolete. For compatibility reasons it does not affect whether it is declared
+	* See menu structure in examples		   
+	* IMPORTANT !!! --> Update structure menu
+
+01/07/2024 * IMAGE WIDTH can bew number or character: 300 or '80%'
+
+28/05/2024 * Select. Label for correctly
+07/04/2024 * Add samples/examples/combo_set.prg  -> set data to combo
+
+06/04/2024 Vrs. 1.18
+06/04/2024 Updated UT 1.13
+	* UGetTokenApiKey( cKey )   --> cToken 
+	* UGetTokenBearer()         --> cToken
+	* UGetTokenBasic()          --> aPair -> aPair[ 'user' ], aPair[ 'password' ]
+	* UJWT() class for management Json Web Token. Finally i ported from mercury
+	* UTokenData()
+	* Image message error embbeded
+
+09/03/2024 Vrs. 1.17
+07/03/2024 tweb.js -> Msgxxx() return object bootbox
+06/03/2024 tweb.lib -> label get memo
+05/03/2024 sidebar -> styles.css 
+03/03/2024 tweb.ch BUTTON <prm: PROMPT,LABEL>
+24/02/2024 tweb.ch -> SELECT -> WIDTH
+24/02/2024 tweb.lib -> SELECT -> WIDTH
+19/02/2024 tweb.lib -> GET DISABLE/READONLY modify disabled attribute
+19/02/2024 tweb.js  -> NAV MENU -> Click out close menu
+19/02/2024 tweb.lib -> NAV MENU -> Click out close menu
+18/02/2024 tweb.lib -> Add CLASS to switch 
+18/02/2024 tweb.ch  -> Add CLASS to switch 
+11/02/2024 tweb.ch ->  BUTTON GROUP
+18/01/2024 Nav menu, add CLASS clausule
+11/01/2024 minor change in Label select
+15/12/2023 Example Tabulator to export data. See \browser\brw-13	  
+10/12/2023 Great performance. Now you can use friendly urls. Very important for webservices
+		   You can test \sample.app\webservice\urlfriendly\
+06/12/2023 Updated libs httpd2 Vrs. 1.10
+
+21/11/2023 Vrs. 1.16
+	* Enchanced uhttpd2.tabulator.js new column event system. See sample.app\editable
+	* Enchanced GET with autocomplete. See controls\autocomplete example
+	* Add jquery-ui.css to tweb\tpl\libs.tpl
+	* Example browse TableUpdateRow. Section Browses 
+
+11/10/2023
+	* Samples into \sample.app\
+		- browse_insert_delete_edit  (simple example for easy edit)
+		- csrf	                     (csrf concept. Concept encript and valid token)
+		 
+		
+07/09/2023 Vrs. 1.15 
+	* TWeb now compiled with MinGw 64 bit also
+	* Now we can generate the library with scripts for msvc64 and gcc64
+	* Examples have been created to see the scripts necessary to compile 
+	  in one way or another.
+	  By default the project is based on MSVC64, but the scripts have been 
+	  created to see how to compile in the following examples:
+	  
+		\sample			- Basic sample
+		\sample.app\curl	- Curl example
+		\sample.app\print	- Print example
+		\sample.tpl		- Bsic template
+		\sample.tpl.ssl		- Basic template for https use (with certificate)
+	  
+21/07/2023 Print example using harupdf. Check sample.app\print folder 
+
+20/06/2023 Vrs. 1.14a	
+	* MENUTIEM clausule CONFIRM <cMsg>
+	* New Container Panel. See controls/containers
+
+14/06/2023 Vrs. 1.14
+	* New Containers
+		- Accordion
+		- Card 
+	See controls/containers
+
+06/06/2023 
+	* Update last uhttpd2 libs
+
+25/05/2023 Vrs. 1.13
+	* Check ID Form if duplicated
+
+24/05/2023 Vrs. 1.12
+	* Dialog have new clausules: addJs() & addCss()
+
+07/05/2023
+	* Add samples.app\ws example with WS (WebSockets). Not ready yet
+	
+20/04/2023 Vrs. 1.11
+	* Add clausule HIDDEN to DIV, ROW, ROWGROUP, COL, BROWSE 
+	
+15/04/2023 Vrs. 1.10 
+	* New example. Mnagament screens, review samples\flow_screen
+
+29/03/2023 Vrs. 1.09 Clausule PBS in button 
+	* check dialog\pbs
+	* check msg\msgloading
+
+16/03/2023 Vrs. 1.08 Flag Error if clausule init form is missing
+
+15/03/2023 Vrs. 1.07 Menu sidebar
+	* check menu examples
+
+05/03/2023 Vrs. 1.06 HIDDEN clausule
+	* check controls\hidden
+
+04/03/2023 Vrs. 1.05 READONLY/DISABLED clausule
+	* check controls\disabled
+
+03/03/2023 Vrs. 1.04 link TButton solved
+	* check samples\examples\button-link.prg
+
+02/03/2023 Vrs. 1.03 revised sessions module.
+	* Check test functional
+
+27/02/2023 Vrs. 1.02 Add new example SSL 
+	 * go to \sample.tpl.ssl
+
+24/02/23 Vrs. 1.01 Add new examples
+	 * Charset examples
+
+18/02/23 Vrs. 1.0j
+	 New examples & functionalities
+	 * All security example. How to protect our module by verifying parameters and access.
+	   Session system prepared. See  samples\functional 
+	 * Curl example. See sample.app\curl	
+
+05/02/23 Vrs. 1.0f
+	 Add upload files. See  samples\controls 
+
+01/02/23 Vrs. 1.0e
+	 Add clausule PROP (Properties) to every controls
+	 See samples\controles  Properties
+
+27/01/23 Vrs. 1.0d
+	 Add clausule STYLE almost to every controls
+	 See \samples\controls
+
+26/01/23 Vrs. 1.0c
+	 Review:
+         * \samples\controls
+         * \samples\browse (Styles)
+         * \samples\dialogs
+		 
+17/01/23 Review load scripts...
+
+14/01/23 Review template base -> \sample.tpl
+
+09/01/23 New folder examples. You can test directly code from folder \examples 
+
+05/01/23 Minor change. getmemo, checkbox
+
+04/01/23 Enchanced. Add clausule ON INIT to DEFINE FORM
+	See example -> Test controls - from function (The Concept) 
+	
+*--------------------------------------	
+03/01/23 First version TWeb for Uhttpd2
+*--------------------------------------	

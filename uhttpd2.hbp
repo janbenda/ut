@@ -1,0 +1,37 @@
+# incremental mode
+-inc
+-head=full
+-workdir=lib/uhttpd2/${hb_compiler}/.hbmk
+
+# create library
+-hblib
+
+# output filename
+-olib/uhttpd2/${hb_compiler}/${hb_name}
+
+# harbour compiler flags
+-n
+-w2
+-es2
+-q0
+-gc2
+
+-DNO_SSL
+-D__DEBUGVIEW
+
+
+# files
+src/uhttpd2/umain.prg
+src/uhttpd2/utpl.prg
+src/uhttpd2/uwidgets.prg
+src/uhttpd2/uwebapi.prg
+src/uhttpd2/udom.prg
+src/uhttpd2/usessions.prg
+src/uhttpd2/utrace.prg
+src/uhttpd2/uprepro.prg
+src/uhttpd2/ucrypt.prg
+src/uhttpd2/utools.prg
+src/uhttpd2/uwebsocket.prg
+src/uhttpd2/ugettoken.prg
+src/uhttpd2/ujwt.prg
+src/uhttpd2/utokendata.prg

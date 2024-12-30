@@ -1,0 +1,4 @@
+#Ignore tots els dirs .hbmk, .sessions
+**/.hbmk/*
+**/.hbmk_ssl/*
+**/lib/*
