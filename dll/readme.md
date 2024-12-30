@@ -1,0 +1,1 @@
+These libraries are necessary if you compile application with msvc64 and use SSL
