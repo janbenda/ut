@@ -60,7 +60,7 @@
 		
 		<!-- -->
 
-		<script src="{{ hb_GetEnv( "ROOTRELATIVE") }}files/uhttpd2/uhttpd2.min.js"></script>
+		<script src="{{ hb_GetEnv( "ROOTRELATIVE") }}files/uhttpd2/uhttpd2.js"></script>
 		<script src="{{ hb_GetEnv( "ROOTRELATIVE") }}files/uhttpd2/uhttpd2.tabulator.js"></script>
 		<link href="{{ hb_GetEnv( "ROOTRELATIVE") }}files/uhttpd2/uhttpd2.css" rel="stylesheet" >		
 
