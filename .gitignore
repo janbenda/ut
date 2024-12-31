@@ -1,3 +1,3 @@
-#Ignore tots els dirs .hbmk, .sessions
+#Ignora tots els dirs .hbmk
 **/.hbmk/*
-**/lib/*
+
