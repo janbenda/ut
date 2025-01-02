@@ -537,7 +537,7 @@ METHOD SetWindow( cUrl, cTarget, cSpecs ) CLASS UDom
 
 	hb_default( @cTarget, '_self' )	//	'_self', _blank 
 	hb_default( @cSpecs, '' )
-	
+
 	::hResponse[ 'window' ] := { 'url' => cUrl, 'target' => cTarget, 'specs' => cSpecs }
 
 RETU NIL 

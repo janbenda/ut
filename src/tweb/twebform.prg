@@ -66,6 +66,7 @@ CLASS TWebForm FROM TWebControl
 	
 ENDCLASS 
 
+
 METHOD New( oWeb, cId, cAction, cMethod, cApi, cProc ) CLASS TWebForm		
 
 	DEFAULT cId 	TO ''
@@ -369,13 +370,9 @@ METHOD Activate( fOnInit ) CLASS TWebForm
 	
 	endif
 	
+	
 	if ::lHttpd2API	
-		/*
-		cHtml += '<script>'
-		cHtml += '$( document ).ready(function() {'		
-		cHtml += '  UInitDialog("' + ::cId + '");'
-		cHtml += '}); '
-		*/
+
 		c := 'UInitDialog("' + ::cId + '");'
 		::Html( JSReady( c ) )
 		
@@ -384,7 +381,9 @@ METHOD Activate( fOnInit ) CLASS TWebForm
 		::Html( JSReady( "console.warn( 'Warning: Form without id or api')" ) )
 		
 	endif 
-
+	
+	
+	
 	FOR nI := 1 To len( ::aControls )
 	
 		IF Valtype( ::aControls[nI] ) == 'O'			
@@ -395,9 +394,6 @@ METHOD Activate( fOnInit ) CLASS TWebForm
 	
 	NEXT	
 	
-	
-
-
 RETU cHtml
 
 

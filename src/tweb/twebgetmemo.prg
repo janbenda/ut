@@ -60,7 +60,7 @@ METHOD Activate() CLASS TWebGetMemo
 	LOCAL cSize := ''
 	local cIdPrefix
 	local cSt := ''
-	local cSizeLabel 
+	local cSizeLabel := ''
 	
 	DO CASE
 		CASE upper(::oParent:cSizing) == 'SM' 

@@ -304,11 +304,16 @@ METHOD Route( cRoute, bAction, cMethod, uCargo ) CLASS UHttpd2
 	endif
 	
 	//	Valid route
-		
-		pRoute := HB_RegexComp( cRoute + '$' )
+		/*	Bug 
+			'^' --> Init string 
+			'$' --> End string 
+			
+			if not specify '^' expresion regular is true for example with 'wndhello' and 'hello'
+		*/
+	
+		pRoute := HB_RegexComp( '^' + cRoute + '$' )
 			
 		if pRoute == NIL 	
-
 			Aadd( ::aErrorRoutes, cRoute )			
 			return nil 
 		endif
@@ -1043,11 +1048,8 @@ LOCAL hSSL
 			aRoute 		:= {}	
 			lPassMethod := .T.			
 
-
-
-
 			IF cMount == '/api'
-		
+	
 				lPassMethod := .t.
 				Aadd( aRoute, { 'route' => '/api', 'config' => aMount[ '/api' ], 'match' => {} } )			
 				
@@ -1058,7 +1060,13 @@ LOCAL hSSL
 					aPair := HB_HPairAt( aMount, n )												
 					
 					if ( aPair[2][ 'regexp' ] != NIL ) 
-					
+
+
+						if left( cMount, 1 ) == '/' .and. len(cMount) > 1 
+							cMount := Substr( cMount, 2 )
+						endif
+
+
 						aMatch := HB_Regex( aPair[2][ 'regexp' ], cMount )
 
 						if !empty( aMatch )   

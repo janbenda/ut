@@ -1,15 +1,15 @@
 /*
 **	module.....: uhttpd2.js -- module control for uhttpd2 (Harbour)
-**	version....: Front 2.3
-**  	last update: 14/12/2024
+**	version....: Front 2.4
+**  	last update: 02/01/2025
 **
 **	(c) 2022-2025 by Carles Aubia
 **
 */
 
-const UHTTPD2_VERSION = 'Front 2.3';
+const UHTTPD2_VERSION = 'Front 2.4';
 
-$( document ).ready(function() { console.info( 'UHTTPD2 ' + UHTTPD2_VERSION) })
+$( document ).ready(function() { console.info( 'UT ' + UHTTPD2_VERSION) })
 
 
 function UHttpd2() {
@@ -188,7 +188,7 @@ function UInitDialog( cId ) {
 	
 	var ids = $('[id="' + cId + '"]');
 
-	
+
 	if ( ids.length > 1 ){
 		console.warn( "Warning!, Dialog Form id duplicated => " + cId )
 		UMsgError( '<b>Dialog Form ID duplicated: </b>' + cId, '<h3>System Error</h3>' )
@@ -1242,7 +1242,18 @@ function UBootbox( cHtml, cTitle, cId, oOption ) {
 			//	No xuta...
 			if ( 'focus' in oConfig ) {
 				$("#" + oConfig[ 'focus' ]  ).focus();				
-			}		
+			}	
+
+			//	There cannot be a duplicate id
+			
+			var ids = $('[id="' + cId + '"]');
+
+			if ( ids.length > 1 ){
+				console.warn( "Warning!, Dialog Form id duplicated => " + cId )
+				UMsgError( '<b>Dialog Form ID duplicated: </b>' + cId, '<h3>System Error</h3>' )
+				return null;
+			}
+			
 		});		
 		
 	//	----------------------------------------------------
