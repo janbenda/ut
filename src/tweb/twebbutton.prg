@@ -26,9 +26,9 @@ METHOD New( oParent, cId, cLabel, cAction , cName, cValue, nGrid, cAlign, cIcon,
 	DEFAULT cValue TO ''
 	DEFAULT nGrid TO 4
 	DEFAULT cAlign TO ''
-	DEFAULT cIcon TO ''		// '<i class="fas fa-check"></i>'
-	DEFAULT cClass TO 'btn-primary'				
+	DEFAULT cIcon TO ''		// '<i class="fas fa-check"></i>'				
 	DEFAULT lDisabled TO .F.				
+	
 	DEFAULT lSubmit TO .F.				
 	DEFAULT cLink TO ''
 	DEFAULT cClass TO ''
@@ -43,10 +43,7 @@ METHOD New( oParent, cId, cLabel, cAction , cName, cValue, nGrid, cAlign, cIcon,
 	DEFAULT cPBS TO ''		
 	
 	
-	if empty( cClass ) 
-		cClass := if( ::lOutline, 'btn-outline-primary' , 'btn-primary')	
-	endif
-	
+
 
 	::oParent 		:= oParent
 	::cId			:= cId
@@ -58,10 +55,9 @@ METHOD New( oParent, cId, cLabel, cAction , cName, cValue, nGrid, cAlign, cIcon,
 	::uValue		:= cValue
 	::cClass		:= cClass
 	::cIcon			:= cIcon
-	::lDisabled		:= lDisabled
+	::lDisabled	:= lDisabled
 	::lSubmit		:= lSubmit
 	::cLink			:= cLink
-	::cClass 		:= cClass
 	::cFont 		:= cFont	
 	::cId_Btn_Files:= cId_Btn_Files
 	::nWidth 		:= nWidth
@@ -70,7 +66,11 @@ METHOD New( oParent, cId, cLabel, cAction , cName, cValue, nGrid, cAlign, cIcon,
 	::cProp			:= cProp 
 	::lHidden 		:= lHidden
 	::cPBS 			:= cPBS
-
+	
+	if empty( ::cClass ) 		
+		::cClass := if( ::lOutline, 'btn-outline-secondary' , 'btn-secondary')	
+	endif
+	
 	IF Valtype( oParent ) == 'O'	
 		oParent:AddControl( SELF )		
 	ENDIF

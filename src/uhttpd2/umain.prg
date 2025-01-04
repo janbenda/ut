@@ -2,7 +2,7 @@
  * HTTPD2 
  *
  * Copyright 2007 Mindaugas Kavaliauskas <dbtopas at dbtopas.lt>
- * Adapted 2022 Carles Aubia <carles9000 at gmail.com>
+ * Adapted 2022-2024 Carles Aubia <carles9000 at gmail.com> for UT Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -238,7 +238,7 @@ METHOD New() CLASS UHttpd2
 
 	
 	::cPathHtml 	:= HB_DIRBASE() + 'html'
-	::cPathLog 	:= HB_DIRBASE() + 'log'
+	::cPathLog 		:= HB_DIRBASE() + '.log'
 	::cSessionPath	:= HB_DIRBASE() + '.sessions'
 	::cPathTmp		:= HB_DIRBASE() + '.tmp'
 	

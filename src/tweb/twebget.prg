@@ -16,6 +16,7 @@ CLASS TWebGet FROM TWebControl
 	DATA hParam 					INIT {=>}
 	DATA cBtnClass					INIT ''
 	DATA lReturn					INIT .F.
+	DATA cConfirm	 				INIT ''
 
 
 	METHOD New() 					CONSTRUCTOR
@@ -24,7 +25,7 @@ CLASS TWebGet FROM TWebControl
 
 ENDCLASS 
 
-METHOD New( oParent, cId, uValue, nGrid, cLabel, cAlign, lReadOnly, cType, cPlaceHolder, aBtnLabel, aBtnAction, aBtnId, lRequired, uSource, cSelect, cChange, cClass, cFont, cFontLabel, cLink, cGroup, cDefault, aSpan, aSpanId, cStyle, cProp, lHidden, hConfig, hParam, cBtnClass, lReturn ) CLASS TWebGet
+METHOD New( oParent, cId, uValue, nGrid, cLabel, cAlign, lReadOnly, cType, cPlaceHolder, aBtnLabel, aBtnAction, aBtnId, lRequired, uSource, cSelect, cChange, cClass, cFont, cFontLabel, cLink, cGroup, cDefault, aSpan, aSpanId, cStyle, cProp, lHidden, hConfig, hParam, cBtnClass, lReturn, cConfirm ) CLASS TWebGet
 
 	DEFAULT cId TO ::GetId()
 	DEFAULT uValue TO ''
@@ -56,6 +57,7 @@ METHOD New( oParent, cId, uValue, nGrid, cLabel, cAlign, lReadOnly, cType, cPlac
 	DEFAULT hParam TO {=>}
 	DEFAULT cBtnClass TO ''
 	DEFAULT lReturn TO .F.
+	DEFAULT cConfirm TO ''
 	
 	::oParent 		:= oParent
 	::cId			:= cId
@@ -88,6 +90,7 @@ METHOD New( oParent, cId, uValue, nGrid, cLabel, cAlign, lReadOnly, cType, cPlac
 	::hParam		:= hParam
 	::cBtnClass	:= cBtnClass
 	::lReturn 		:= lReturn
+	::cConfirm 		:= cConfirm
 
 	IF Valtype( oParent ) == 'O'	
 		oParent:AddControl( SELF )			
@@ -179,6 +182,8 @@ METHOD Activate() CLASS TWebGet
 	if !empty( ::cDefault )
 		cHtml += 'data-default="' + ::cDefault + '" '
 	endif	
+	
+
 	
 	cHtml += ' type="' + ::cType + '" class="form-control ' + cSize + ' ' + cAlign
 	
@@ -286,7 +291,12 @@ METHOD Activate() CLASS TWebGet
 						cHtml += 'onclick="' + cAction + '" '				
 					else
 						cHtml += 'data-live data-onclick="' + cAction + '" '					
-					endif				
+					endif	
+
+					if !empty( ::cConfirm )
+						cHtml += ' data-confirm="' + ::cConfirm + '" '
+					endif 	
+					
 				endif				
 				
 			else	

@@ -1,7 +1,7 @@
 /*
 **  tweb.prg -- TWeb library form mod harbour
 **
-** (c) Carles Aubia, 2019-2024
+** (c) Carles Aubia, 2019-2025
 ** Developed by Carles Aubia Floresvi carles9000@gmail.com
 ** MIT license https://github.com/carles9000/tweb.uhttpd2/blob/master/LICENSE
 */
@@ -48,14 +48,12 @@
 #include 'twebcommon.prg'
 #include 'twebbrowse.prg'
 #include 'twebdialog.prg'
-#include 'twebunicode.prg'
 #include 'twebcard.prg'
 #include 'twebaccordion.prg'
 #include 'twebpanel.prg'
 #include 'twebprogress.prg'
 
-//#include 'mc_prepro.prg'
-//#include 'mh.prg'
+//#include 'twebunicode.prg'
 //	----------------------------------------------------------
 
 
@@ -68,10 +66,10 @@ CLASS TWeb
 	DATA cTitle		 			
 	DATA cIcon 						
 	DATA cLang						INIT 'en' 						
-	DATA cPathTpl  				INIT '' 						
+	DATA cPathTpl  					INIT '' 						
 	DATA cRootRelative				INIT '' 	
 	DATA cCharset					INIT 'UTF-8'	//	'ISO-8859-1'	
-	DATA lActivated					INIT .F.
+	DATA lActivated				INIT .F.
 	DATA lHeader					INIT .T.
 	DATA aInclude					INIT {}
 	DATA aControls					INIT {}
@@ -87,13 +85,12 @@ ENDCLASS
 
 METHOD New( cTitle, cIcon, lTables, cCharset,  cPathTpl ) CLASS TWeb
 
-	DEFAULT cTitle 			TO 'TWeb'
-	//DEFAULT cIcon 			TO __TWebGlobal[ 'url_tweb' ] + 'images/tweb.png'
-	DEFAULT lTables			TO .F.
+	DEFAULT cTitle 		TO 'TWeb'	
+	DEFAULT lTables		TO .F.
 	DEFAULT cCharSet		TO 'UTF-8' 		//	'ISO-8859-1'
 	
-	//DEFAULT cIcon 			TO HB_Dirbase() + 'files\tweb\images\tweb.png'
-	DEFAULT cIcon 			TO 'files/tweb/images/tweb.ico'
+	
+	DEFAULT cIcon 			TO 'files/images/ut.ico'
 	DEFAULT cPathTpl 		TO HB_Dirbase() + 'files\tweb\tpl\'
 	
 	::cTitle 	:= cTitle
@@ -123,14 +120,11 @@ METHOD Activate() CLASS TWeb
 		cHtml	+= '<meta charset="' + ::cCharset + '">' + CRLF			
 		cHtml 	+= '<meta http-equiv="X-UA-Compatible" content="IE=edge">' + CRLF
 		cHtml 	+= '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">' + CRLF	
-		cHtml 	+= '<link rel="shortcut icon" type="image/png" href="{{ hb_GetEnv( "ROOTRELATIVE") }}' + ::cIcon + '"/>' + CRLF
-		
-		//cHtml   += hb_memoread( ::cPathTpl + 'libs.tpl' ) + CRLF 		
+		cHtml 	+= '<link rel="shortcut icon" type="image/png" href="{{ hb_GetEnv( "ROOTRELATIVE") }}' + ::cIcon + '"/>' + CRLF				
 
 		cHtml 	+= hb_memoread( ::cPathTpl + 'libs.tpl' ) + CRLF 				
 		
-		FOR nI := 1 To len( ::aInclude )	
-	
+		FOR nI := 1 To len( ::aInclude )		
 			cHtml += ::aInclude[ nI ] + CRLF 
 		next				
 		
