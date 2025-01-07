@@ -1,44 +1,45 @@
 #define U_PSW  'mEmorY@2022!'
 
-static _cPsw := U_PSW 
+STATIC _cPsw := U_PSW
 
-function USetPsw( cNewPsw ) 
-	_cPsw := cNewPsw
-retu nil 
+FUNCTION USetPsw( cNewPsw )
 
-function UGetPsw() ; retu _cPsw
+   _cPsw := cNewPsw
+   RETU NIL
 
-function USetToken( uData, cPsw ) 
-	
-	local cKey 	:= hb_blowfishKey( if( valtype(cPsw) == 'C', cPsw, UGetPsw()) )		
-	local hData 	:= {=>}
-	local cToken, cData
-	
-	hData[ 'data' ] := uData
+FUNCTION UGetPsw() ; RETU _cPsw
 
-	cData	:= hb_jsonencode( hData )	
-	
-	cToken 	:= hb_base64Encode( hb_blowfishEncrypt( cKey, cData )	)
-	cToken 	:= hb_StrReplace( cToken, '+/', '-_' )
-	
-retu cToken 
+FUNCTION USetToken( uData, cPsw )
 
-// lAuth by reference 
+   LOCAL cKey  := hb_blowfishKey( if( ValType( cPsw ) == 'C', cPsw, UGetPsw() ) )
+   LOCAL hData  := { => }
+   LOCAL cToken, cData
 
-function UGetToken( cToken, lAuth, cPsw  )
+   hData[ 'data' ] := uData
 
-	local cRealToken 	:= hb_StrReplace( cToken, '-_',  '+/' )	
-	local hData 		:= {=>}
-	local cData
-	
-	cRealToken := hb_base64Decode( cRealToken )			
+   cData := hb_jsonEncode( hData )
 
-	cData := hb_blowfishDecrypt( hb_blowfishKey( if( valtype(cPsw) == 'C', cPsw, UGetPsw()) ), cRealToken )					
-	
-	lAuth := if( cData == nil, .f., .t. )
-	
-	if lAuth 
-		hData	:= hb_jsondecode( cData )
-	endif	
+   cToken  := hb_base64Encode( hb_blowfishEncrypt( cKey, cData ) )
+   cToken  := hb_StrReplace( cToken, '+/', '-_' )
 
-retu if( !empty( hData ), hData[ 'data' ], nil )
+   RETU cToken
+
+// lAuth by reference
+
+FUNCTION UGetToken( cToken, lAuth, cPsw  )
+
+   LOCAL cRealToken  := hb_StrReplace( cToken, '-_',  '+/' )
+   LOCAL hData   := { => }
+   LOCAL cData
+
+   cRealToken := hb_base64Decode( cRealToken )
+
+   cData := hb_blowfishDecrypt( hb_blowfishKey( if( ValType( cPsw ) == 'C', cPsw, UGetPsw() ) ), cRealToken )
+
+   lAuth := if( cData == NIL, .F., .T. )
+
+   IF lAuth
+      hData := hb_jsonDecode( cData )
+   ENDIF
+
+   RETU if( !Empty( hData ), hData[ 'data' ], NIL )

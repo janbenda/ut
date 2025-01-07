@@ -2,461 +2,458 @@
 #include 'common.ch'
 
 STATIC nSessions_Executed := 1
-STATIC hmtxSession 
+STATIC hmtxSession
 
 THREAD STATIC oSession
 
-//	---------------------------------------------------------------------- //
+// ---------------------------------------------------------------------- //
 
-function USessionValid()
-retu ValType( oSession ) == 'O' .and. oSession:ClassName() == 'USESSIONS'
+FUNCTION USessionValid()
 
-//	---------------------------------------------------------------------- //
+   RETU ValType( oSession ) == 'O' .AND. oSession:ClassName() == 'USESSIONS'
 
-function USessionStart()
+// ---------------------------------------------------------------------- //
 
-	if USessionValid()
-		retu .t.	
-	endif	
+FUNCTION USessionStart()
 
-	oSession 		:= USessions():New()
+   IF USessionValid()
+      RETU .T.
+   ENDIF
 
-	oSession:Init()	
+   oSession   := USessions():New()
 
-retu nil
+   oSession:Init()
 
-//	---------------------------------------------------------------------- //
+   RETU NIL
 
-function USessionReady()
+// ---------------------------------------------------------------------- //
 
-	local lValidate := .f. 
-	
-	if USessionValid()
-		retu .t.	
-	endif	
-	
-	oSession	:= USessions():New()
-	
-	lValidate	:= oSession:ReadCookie()
+FUNCTION USessionReady()
 
-	if ! lValidate 
-		oSession:End()
-		oSession := NIL 
-	endif
+   LOCAL lValidate := .F.
 
-retu lValidate 
+   IF USessionValid()
+      RETU .T.
+   ENDIF
 
-//	---------------------------------------------------------------------- //
+   oSession := USessions():New()
 
-function USessionEnd()	
+   lValidate := oSession:ReadCookie()
 
-	local oServer
+   IF ! lValidate
+      oSession:End()
+      oSession := NIL
+   ENDIF
 
-	if USessionReady()
-		oSession:End()	
-	else
-	
-	//	If exist a cookie, we'll delete it
-	
-		oServer 	:= UGetServer()
-	
-		if ! empty( oServer:cSessionName )
-			USetCookie( oServer:cSessionName, '', -1 )
-		endif
-		
-	endif	
-	
-	oSession := NIL
-	
-retu nil
+   RETU lValidate
 
-//	---------------------------------------------------------------------- //
+// ---------------------------------------------------------------------- //
 
-function USessionWrite()
+FUNCTION USessionEnd()
 
-	if USessionValid()
-		oSession:Write()
-	endif
-	
-retu nil
+   LOCAL oServer
 
-//	---------------------------------------------------------------------- //
+   IF USessionReady()
+      oSession:End()
+   ELSE
 
-function USession( cKey, uValue )		
+// If exist a cookie, we'll delete it
 
-	if USessionValid()
-		retu oSession:Data( cKey, uValue )		
-	endif	
-	
-retu ''
+      oServer  := UGetServer()
 
-//	---------------------------------------------------------------------- //
+      IF ! Empty( oServer:cSessionName )
+         USetCookie( oServer:cSessionName, '', - 1 )
+      ENDIF
 
-function USessionAll()		
+   ENDIF
 
-	if USessionValid()
-		retu oSession:AllData()		
-	endif	
+   oSession := NIL
 
-retu nil
+   RETU NIL
 
-//	---------------------------------------------------------------------- //
+// ---------------------------------------------------------------------- //
 
-function USessionEmpty()		
+FUNCTION USessionWrite()
 
-	if USessionValid()
-		retu empty( oSession:AllData() )		
-	endif
-	
-	UDo_Error( 'System Sessions not created!', nil, 100 )	
+   IF USessionValid()
+      oSession:Write()
+   ENDIF
 
-retu nil
+   RETU NIL
 
-//	---------------------------------------------------------------------- //
+// ---------------------------------------------------------------------- //
 
-function UGetSession() 
+FUNCTION USession( cKey, uValue )
 
-	local hInfo := {=>}
+   IF USessionValid()
+      RETU oSession:Data( cKey, uValue )
+   ENDIF
 
-	if USessionValid()
-	
-		hInfo[ 'path' ] 		:= oSession:cPath 	
-		hInfo[ 'name' ] 		:= oSession:cName		
-		hInfo[ 'prefix' ] 		:= oSession:cPrefix 	
-		
-		//hInfo[ 'seed' ] 		:= oSession:cSeed 	
-		
-		hInfo[ 'duration' ]		:= oSession:nDuration
-		hInfo[ 'expired' ]		:= oSession:hSession[ 'expired' ]
-		hInfo[ 'ip' ]			:= oSession:hSession[ 'ip' ]
-		hInfo[ 'sid' ]			:= oSession:hSession[ 'sid' ]
-		//hInfo[ 'sid' ] 			:= oSession:cSID				
-		hInfo[ 'garbage' ] 		:= oSession:nGarbage 	
-		hInfo[ 'lifedays' ] 	:= oSession:nLifeDays	
-		hInfo[ 'crypt' ] 		:= oSession:lCrypt	
-		
-	endif
-	
-retu hInfo
+   RETU ''
 
-//	---------------------------------------------------------------------- //
+// ---------------------------------------------------------------------- //
 
-function USessionDelete()
+FUNCTION USessionAll()
 
-	oSession := NIL 
+   IF USessionValid()
+      RETU oSession:AllData()
+   ENDIF
 
-retu nil
+   RETU NIL
 
-//	---------------------------------------------------------------------- //
+// ---------------------------------------------------------------------- //
 
+FUNCTION USessionEmpty()
 
-//	---------------------------------------------------------------------- //
-//	Sessions Class for UHttpd2
-//	---------------------------------------------------------------------- //
+   IF USessionValid()
+      RETU Empty( oSession:AllData() )
+   ENDIF
+
+   UDo_Error( 'System Sessions not created!', NIL, 100 )
+
+   RETU NIL
+
+// ---------------------------------------------------------------------- //
+
+FUNCTION UGetSession()
+
+   LOCAL hInfo := { => }
+
+   IF USessionValid()
+
+      hInfo[ 'path' ]   := oSession:cPath
+      hInfo[ 'name' ]   := oSession:cName
+      hInfo[ 'prefix' ]   := oSession:cPrefix
+
+// hInfo[ 'seed' ]   := oSession:cSeed
+
+      hInfo[ 'duration' ]  := oSession:nDuration
+      hInfo[ 'expired' ]  := oSession:hSession[ 'expired' ]
+      hInfo[ 'ip' ]   := oSession:hSession[ 'ip' ]
+      hInfo[ 'sid' ]   := oSession:hSession[ 'sid' ]
+// hInfo[ 'sid' ]    := oSession:cSID
+      hInfo[ 'garbage' ]   := oSession:nGarbage
+      hInfo[ 'lifedays' ]  := oSession:nLifeDays
+      hInfo[ 'crypt' ]   := oSession:lCrypt
+
+   ENDIF
+
+   RETU hInfo
+
+// ---------------------------------------------------------------------- //
+
+FUNCTION USessionDelete()
+
+   oSession := NIL
+
+   RETU NIL
+
+// ---------------------------------------------------------------------- //
 
 
-CLASS USessions 
+// ---------------------------------------------------------------------- //
+// Sessions Class for UHttpd2
+// ---------------------------------------------------------------------- //
 
-	DATA cPath						
-	DATA cName							
-	DATA cPrefix							
-	DATA nDuration				
-	DATA nGarbage					
-	DATA nLifeDays					
-	DATA hSession 					INIT {=>}
-	DATA cSID						INIT ''
-	
-	DATA cSeed						
-	DATA lCrypt						INIT .F.		
-	
-	METHOD New()
-	
-	METHOD Init() 
-	METHOD InitData( cSID ) 
-	
-	METHOD ReadCookie()
-	METHOD Validate()	
-	METHOD Write()
-	METHOD Data( cKey, uValue ) 	
-	METHOD AllData()				INLINE if( hb_HHasKey( ::hSession, 'data' ), ::hSession[ 'data'   ], {=>} )
-		
-	METHOD NewId() 				INLINE hb_MD5( DToS( Date() ) + Time() + Str( hb_Random(), 15, 12 ) )
-	METHOD SessionFile()			INLINE if( empty( ::cSID ), '', ::cPath + '\' + ::cPrefix + ::cSID )
+CLASS USessions
 
-	METHOD Garbage()
-	
-	METHOD End() 
-	
-ENDCLASS 
+   DATA cPath
+   DATA cName
+   DATA cPrefix
+   DATA nDuration
+   DATA nGarbage
+   DATA nLifeDays
+   DATA hSession      INIT { => }
+   DATA cSID      INIT ''
 
-//	---------------------------------------------------------------------- //
+   DATA cSeed
+   DATA lCrypt      INIT .F.
+
+   METHOD New()
+
+   METHOD Init()
+   METHOD InitData( cSID )
+
+   METHOD ReadCookie()
+   METHOD Validate()
+   METHOD Write()
+   METHOD Data( cKey, uValue )
+   METHOD AllData()    INLINE if( hb_HHasKey( ::hSession, 'data' ), ::hSession[ 'data'   ], { => } )
+
+   METHOD NewId()     INLINE hb_MD5( DToS( Date() ) + Time() + Str( hb_Random(), 15, 12 ) )
+   METHOD SessionFile()   INLINE if( Empty( ::cSID ), '', ::cPath + '\' + ::cPrefix + ::cSID )
+
+   METHOD Garbage()
+
+   METHOD End()
+
+ENDCLASS
+
+// ---------------------------------------------------------------------- //
 
 METHOD New() CLASS USessions
 
-	local oServer 	:= UGetServer()
+   LOCAL oServer  := UGetServer()
 
-	::cPath 		:= oServer:cSessionPath			//	Default path session ./sessions
-	::cName			:= oServer:cSessionName			//	Default session name USESSID
-	::cPrefix 		:= oServer:cSessionPrefix			//	Default prefix sess_
-	::cSeed 		:= oServer:cSessionSeed			//	Password
-	
-	::nDuration 	:= oServer:nSessionDuration		//	Default duration session time 3600
-	::nGarbage 	:= oServer:nSessionGarbage		//	Default totals sessions executed for garbage 1000
-	::nLifeDays		:= oServer:nSessionLifeDays		//	Default days stored for garbage 3
-	::lCrypt		:= oServer:lSessionCrypt			//	Default crypt session .F.
-	::cSID			:= ''				
-	
-	
-	if hmtxSession == NIL
-		hmtxSession	:= hb_mutexCreate()	
-	endif 
-	
-retu Self
+   ::cPath   := oServer:cSessionPath   // Default path session ./sessions
+   ::cName   := oServer:cSessionName   // Default session name USESSID
+   ::cPrefix   := oServer:cSessionPrefix   // Default prefix sess_
+   ::cSeed   := oServer:cSessionSeed   // Password
 
-//	---------------------------------------------------------------------- //
+   ::nDuration  := oServer:nSessionDuration  // Default duration session time 3600
+   ::nGarbage  := oServer:nSessionGarbage  // Default totals sessions executed for garbage 1000
+   ::nLifeDays  := oServer:nSessionLifeDays  // Default days stored for garbage 3
+   ::lCrypt  := oServer:lSessionCrypt   // Default crypt session .F.
+   ::cSID   := ''
+
+
+   IF hmtxSession == NIL
+      hmtxSession := hb_mutexCreate()
+   ENDIF
+
+   RETU Self
+
+// ---------------------------------------------------------------------- //
 
 METHOD Init() CLASS USessions
-	
-	local lNew 		:= .T.
-	local cFile
-	
-	::cSID	:= UGetCookie( ::cName )
 
-	if ! empty( ::cSID )
+   LOCAL lNew   := .T.
+   LOCAL cFile
 
-		cFile := ::cPath + '\' + ::cPrefix + ::cSID 
-	
-		lNew := if( ::Validate(), .F., .T. )	
-		
-		if lNew 	//	Try to delte old session		
+   ::cSID := UGetCookie( ::cName )
 
-			if file( cFile )			
-				fErase( cFile )
-			endif
-			
-		endif
+   IF ! Empty( ::cSID )
 
-	endif
-	
-	if lNew 
-	
-		::InitData()
-	
-	endif 	
+      cFile := ::cPath + '\' + ::cPrefix + ::cSID
 
-retu nil
+      lNew := if( ::Validate(), .F., .T. )
 
-//	---------------------------------------------------------------------- //
+      IF lNew  // Try to delte old session
+
+         IF File( cFile )
+            FErase( cFile )
+         ENDIF
+
+      ENDIF
+
+   ENDIF
+
+   IF lNew
+
+      ::InitData()
+
+   ENDIF
+
+   RETU NIL
+
+// ---------------------------------------------------------------------- //
 
 METHOD ReadCookie() CLASS USessions
 
-	::cSID := UGetCookie( ::cName ) 
-	
-	if empty( ::cSID )
-		retu .f.
-	endif	
+   ::cSID := UGetCookie( ::cName )
 
-retu ::Validate()
+   IF Empty( ::cSID )
+      RETU .F.
+   ENDIF
 
-//	---------------------------------------------------------------------- //
+   RETU ::Validate()
+
+// ---------------------------------------------------------------------- //
 
 METHOD Validate() CLASS USessions
 
-	local lValidate := .f.
-	local cFile, cSession	
-	
-	cFile := ::SessionFile()
+   LOCAL lValidate := .F.
+   LOCAL cFile, cSession
 
-	if ! file( cFile )
-		retu .f.
-	endif
-	
-	cSession := hb_Base64Decode( hb_Memoread( cFile ) )		
-	
-	if empty( cSession ) 
-		retu .f.
-	endif
+   cFile := ::SessionFile()
 
-	if ::lCrypt
-		cSession := hb_blowfishDecrypt( hb_blowfishKey( ::cSeed ), cSession )					
-	endif	
+   IF ! File( cFile )
+      RETU .F.
+   ENDIF
 
-	::hSession := hb_deserialize( cSession )						
+   cSession := hb_base64Decode( hb_MemoRead( cFile ) )
 
-	if Valtype( ::hSession ) == 'H' 	
-	
-		//	Validaremos estructura
-		
-		if ( 	hb_HHasKey( ::hSession, 'ip'   	) .and. ;
-				hb_HHasKey( ::hSession, 'sid'  	) .and. ;
-				hb_HHasKey( ::hSession, 'expired' ) .and. ;
-				hb_HHasKey( ::hSession, 'data' 	) )												
-		
-			if  ::hSession[ 'expired' ] >= seconds()  .and. ;
-				::hSession[ 'ip' ] == UGetIp()
-			
-				lValidate 	:= .T.	
-	
-			endif							
+   IF Empty( cSession )
+      RETU .F.
+   ENDIF
 
-		endif	
-	
-	endif	
+   IF ::lCrypt
+      cSession := hb_blowfishDecrypt( hb_blowfishKey( ::cSeed ), cSession )
+   ENDIF
 
-RETU lValidate
+   ::hSession := hb_Deserialize( cSession )
 
-//	---------------------------------------------------------------------- //
+   IF ValType( ::hSession ) == 'H'
+
+// Validaremos estructura
+
+      IF (  hb_HHasKey( ::hSession, 'ip'    ) .AND. ;
+            hb_HHasKey( ::hSession, 'sid'   ) .AND. ;
+            hb_HHasKey( ::hSession, 'expired' ) .AND. ;
+            hb_HHasKey( ::hSession, 'data'  ) )
+
+         IF  ::hSession[ 'expired' ] >= Seconds()  .AND. ;
+               ::hSession[ 'ip' ] == UGetIp()
+
+            lValidate  := .T.
+
+         ENDIF
+
+      ENDIF
+
+   ENDIF
+
+   RETU lValidate
+
+// ---------------------------------------------------------------------- //
 
 METHOD InitData( cSID ) CLASS USessions
 
-	hb_default( @cSID, ::NewId() )
+   hb_default( @cSID, ::NewId() )
 
-	::hSession := { => }
-	
-	::hSession[ 'ip'     ] := UGetIp()			//	La Ip no es fiable. Pueden usar proxy
-	::hSession[ 'sid'    ] := cSID
-	::hSession[ 'expired'] := seconds() + ::nDuration
-	::hSession[ 'data'   ] := { => }	
-	
-	::cSID := cSID
+   ::hSession := { => }
 
-retu nil
+   ::hSession[ 'ip'     ] := UGetIp()   // La Ip no es fiable. Pueden usar proxy
+   ::hSession[ 'sid'    ] := cSID
+   ::hSession[ 'expired' ] := Seconds() + ::nDuration
+   ::hSession[ 'data'   ] := { => }
 
-//	---------------------------------------------------------------------- //
+   ::cSID := cSID
+
+   RETU NIL
+
+// ---------------------------------------------------------------------- //
 
 METHOD End() CLASS USessions
 
-	local cFile 
+   LOCAL cFile
 
-	if ! empty( ::cName )
-		USetCookie( ::cName, '', -1 )
-	endif
+   IF ! Empty( ::cName )
+      USetCookie( ::cName, '', - 1 )
+   ENDIF
 
-	if empty( ::cSID )
-		retu .f.
-	endif	
+   IF Empty( ::cSID )
+      RETU .F.
+   ENDIF
 
-	cFile := ::SessionFile()	
+   cFile := ::SessionFile()
 
 
-	if File( cFile )
-		fErase( cFile ) 
-	endif 			
+   IF File( cFile )
+      FErase( cFile )
+   ENDIF
 
-	::hSession  	:= {=>}
-	::cSID			:= ''	
-	::cName 		:= ''
-			
-retu nil
+   ::hSession   := { => }
+   ::cSID   := ''
+   ::cName   := ''
 
-//	---------------------------------------------------------------------- //
+   RETU NIL
 
+// ---------------------------------------------------------------------- //
 
 METHOD Write() CLASS USessions
 
-	local cData, cKey, lSave
-	local lGarbage := .f.
+   LOCAL cData, cKey, lSave
+   LOCAL lGarbage := .F.
 
-		::hSession[ 'expired' ] 	:= seconds() + ::nDuration		
-	
-		cData 	:= hb_serialize( ::hSession )
+   ::hSession[ 'expired' ]  := Seconds() + ::nDuration
 
-		if ::lCrypt
-			cKey 		:= hb_blowfishKey( ::cSeed )	
-			cData 		:= hb_blowfishEncrypt( cKey, cData )	
-		endif		
+   cData  := hb_Serialize( ::hSession )
 
-		lSave := hb_memowrit( ::SessionFile(), hb_Base64Encode( cData ) ) 
-		
-	
+   IF ::lCrypt
+      cKey   := hb_blowfishKey( ::cSeed )
+      cData   := hb_blowfishEncrypt( cKey, cData )
+   ENDIF
 
-	// 	GARBAGE 
-	
-		hb_mutexLock(hmtxSession)
-		
-			nSessions_Executed++
-			
-			if nSessions_Executed > ::nGarbage		
-				nSessions_Executed 	:= 0
-				lGarbage				:= .t.
-			endif
+   lSave := hb_MemoWrit( ::SessionFile(), hb_base64Encode( cData ) )
 
-		hb_mutexUnlock(hmtxSession)		
 
-		if lGarbage
-			::Garbage()
-		endif
-		
-	//	-------------------------
-		
-	USetCookie( ::cName, ::cSID, 0 )	//	Session live like browser	
-	
-retu nil
 
-//	---------------------------------------------------------------------- //
+// GARBAGE
 
+   hb_mutexLock( hmtxSession )
+
+   nSessions_Executed++
+
+   IF nSessions_Executed > ::nGarbage
+      nSessions_Executed  := 0
+      lGarbage    := .T.
+   ENDIF
+
+   hb_mutexUnlock( hmtxSession )
+
+   IF lGarbage
+      ::Garbage()
+   ENDIF
+
+// -------------------------
+
+   USetCookie( ::cName, ::cSID, 0 ) // Session live like browser
+
+   RETU NIL
+
+// ---------------------------------------------------------------------- //
 
 METHOD Garbage() CLASS USessions
 
-	local aFiles 	:= Directory( ::cPath + '/*.*' )
-	local nFiles 	:= len( aFiles )
-	local nSFiles 	:= 0
-	local nSize 	:= 0
-	local nTime 	:= hb_milliseconds()
-	local nI, dMaxDate
-	
-	dMaxDate := date() - ::nLifeDays
-	
-	_d( 'Init Garbage Procces! => ' + dtoc(dMaxDate) )
-	
-	for nI := 1 to nFiles 
-	
-		if aFiles[nI][3] <= dMaxDate 			
-			
-			if fErase( ::cPath + '/' + aFiles[nI][1] ) == 0
-				nSFiles++
-				nSize 	+= aFiles[nI][2]
-			endif
-			
-		endif
-	next	
-	
-	_d( '=====================================' )
-	_d( 'Session files deleted: ' 		+ ltrim(str( nSFiles )) )
-	_d( 'Session size deleted: ' 		+ ltrim(str( nSize )) + ' kb.' )
-	_d( 'Time proccess for garbage: ' 	+ ltrim(str( hb_milliseconds() - nTime )) + ' ms.' )
-	_d( '=====================================' )
-	
-	
-retu nil
+   LOCAL aFiles  := Directory( ::cPath + '/*.*' )
+   LOCAL nFiles  := Len( aFiles )
+   LOCAL nSFiles  := 0
+   LOCAL nSize  := 0
+   LOCAL nTime  := hb_MilliSeconds()
+   LOCAL nI, dMaxDate
 
-//	---------------------------------------------------------------------- //
+   dMaxDate := Date() - ::nLifeDays
+
+   _d( 'Init Garbage Procces! => ' + DToC( dMaxDate ) )
+
+   FOR nI := 1 TO nFiles
+
+      IF aFiles[ nI ][ 3 ] <= dMaxDate
+
+         IF FErase( ::cPath + '/' + aFiles[ nI ][ 1 ] ) == 0
+            nSFiles++
+            nSize  += aFiles[ nI ][ 2 ]
+         ENDIF
+
+      ENDIF
+   NEXT
+
+   _d( '=====================================' )
+   _d( 'Session files deleted: '   + LTrim( Str( nSFiles ) ) )
+   _d( 'Session size deleted: '   + LTrim( Str( nSize ) ) + ' kb.' )
+   _d( 'Time proccess for garbage: '  + LTrim( Str( hb_MilliSeconds() - nTime ) ) + ' ms.' )
+   _d( '=====================================' )
+
+
+   RETU NIL
+
+// ---------------------------------------------------------------------- //
 
 METHOD Data( cKey, uValue )  CLASS USessions
 
-	hb_default( @cKey, '' )
-	
-	cKey := lower( cKey )		
-	
-	if ValType( uValue ) <> 'U' 		//	SETTER
+   hb_default( @cKey, '' )
 
-		if !empty( cKey ) 						
-			
-			::hSession[ 'data' ][ cKey ] := uValue		
-			
-		endif
-	
-	else								// GETTER
-		
-		if ( hb_HHasKey( ::hSession[ 'data' ], cKey  ) )
-			retu ::hSession[ 'data' ][ cKey ] 
-		else
-			retu ''
-		endif
-		
-	endif 		
+   cKey := Lower( cKey )
 
-retu nil
+   IF ValType( uValue ) <> 'U'   // SETTER
 
-//	---------------------------------------------------------------------- //
+      IF !Empty( cKey )
 
+         ::hSession[ 'data' ][ cKey ] := uValue
+
+      ENDIF
+
+   ELSE        // GETTER
+
+      IF ( hb_HHasKey( ::hSession[ 'data' ], cKey  ) )
+         RETU ::hSession[ 'data' ][ cKey ]
+      ELSE
+         RETU ''
+      ENDIF
+
+   ENDIF
+
+   RETU NIL
+
+// ---------------------------------------------------------------------- //

@@ -1,79 +1,77 @@
-//	-------------------------------------------------------------
+// -------------------------------------------------------------
 
 CLASS TWebFont FROM TWebControl
 
-	DATA cColor 					INIT ''
-	DATA cbackground				INIT ''
-	DATA nSize 						INIT 0
-	DATA lBold 						INIT .F.
-	DATA lItalic 					INIT .F.
-	DATA cFamily					INIT ''
+   DATA cColor      INIT ''
+   DATA cbackground    INIT ''
+   DATA nSize       INIT 0
+   DATA lBold       INIT .F.
+   DATA lItalic      INIT .F.
+   DATA cFamily     INIT ''
 
-	METHOD New() 					CONSTRUCTOR
-	METHOD Activate()
+   METHOD New()      CONSTRUCTOR
+   METHOD Activate()
 
-
-ENDCLASS 
+ENDCLASS
 
 METHOD New( oParent, cId, cColor, cbackGround, nSize, lBold, lItalic, cFamily ) CLASS TWebFont
 
-	DEFAULT cId 			TO ''
-	DEFAULT cColor 		TO ''
-	DEFAULT cBackGround 	TO ''
-	DEFAULT nSize			TO 0
-	DEFAULT lBold			TO .F.
-	DEFAULT lItalic		TO .F.
-	DEFAULT cFamily 		TO ''
+   DEFAULT cId    TO ''
+   DEFAULT cColor   TO ''
+   DEFAULT cBackGround  TO ''
+   DEFAULT nSize   TO 0
+   DEFAULT lBold   TO .F.
+   DEFAULT lItalic  TO .F.
+   DEFAULT cFamily   TO ''
 
-	
-	::oParent 		:= oParent
-	::cId			:= cId
-	::cColor		:= cColor
-	::cBackGround	:= cBackGround
-	::nSize 		:= nSize
-	::lBold 		:= lBold
-	::lItalic 		:= lItalic
-	::cFamily 		:= cFamily
 
-	IF Valtype( oParent ) == 'O'	
-		oParent:AddControl( SELF )	
-	ENDIF
+   ::oParent   := oParent
+   ::cId   := cId
+   ::cColor  := cColor
+   ::cBackGround := cBackGround
+   ::nSize   := nSize
+   ::lBold   := lBold
+   ::lItalic   := lItalic
+   ::cFamily   := cFamily
 
-RETU SELF
+   IF ValType( oParent ) == 'O'
+      oParent:AddControl( SELF )
+   ENDIF
+
+   RETU SELF
 
 METHOD Activate() CLASS TWebFont
 
-	LOCAL cHtml := ''
+   LOCAL cHtml := ''
 
+   cHtml += '<style>'
+   cHtml += '    .' + ::cId + '{ '
 
-	cHtml += '<style>'
-	cHtml += '    .' + ::cId + '{ '
+   IF !Empty( ::cColor )
+      cHtml += 'color: ' + ::cColor + ' !important;'
+   ENDIF
 
-	if !empty( ::cColor )
-		cHtml += 'color: ' + ::cColor + ' !important;'
-	endif
+   IF !Empty( ::cBackGround )
+      cHtml += 'background: ' + ::cBackGround + ' !important;'
+   ENDIF
 
-	if !empty( ::cBackGround )
-		cHtml += 'background: ' + ::cBackGround + ' !important;'
-	endif	
-	
-	if ::nSize > 0
-		cHtml += 'font-size: ' + ltrim(str( ::nSize )) + 'px  !important;'
-	endif	
+   IF ::nSize > 0
+      cHtml += 'font-size: ' + LTrim( Str( ::nSize ) ) + 'px  !important;'
+   ENDIF
 
-	if ::lBold
-		cHtml += 'font-weight: bold  !important;'
-	endif
-	
-	if ::lItalic
-		cHtml += 'font-style: italic  !important;'
-	endif	
-	
-	if !empty( ::cFamily )
-		cHtml += 'font-family: ' + ::cFamily + ' !important;'
-	endif		
-	
-	cHtml += '} '
-	cHtml += '</style>'
+   IF ::lBold
+      cHtml += 'font-weight: bold  !important;'
+   ENDIF
 
-RETU cHtml
+   IF ::lItalic
+      cHtml += 'font-style: italic  !important;'
+   ENDIF
+
+   IF !Empty( ::cFamily )
+      cHtml += 'font-family: ' + ::cFamily + ' !important;'
+   ENDIF
+
+   cHtml += '} '
+   cHtml += '</style>'
+
+   RETU cHtml

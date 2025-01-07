@@ -1,5 +1,5 @@
 /*
- * HTTPD2 
+ * HTTPD2
  *
  * Copyright 2007 Mindaugas Kavaliauskas <dbtopas at dbtopas.lt>
  * Adapted 2022-2024 Carles Aubia <carles9000 at gmail.com> for UT Project
@@ -44,9 +44,9 @@
  * If you do not wish that, delete this exception notice.
  *
  */
-request hb_threadId
-request __vmCountThreads
- 
+REQUEST hb_threadId
+REQUEST __vmCountThreads
+
 #include "hbclass.ch"
 #include "common.ch"
 #include "fileio.ch"
@@ -69,25 +69,25 @@ request __vmCountThreads
   HTTP Made Really Easy (http://www.jmarshall.com/easy/http/)
 */
 
-#define HTTPD2_VERSION			 	'2.00'
+#define HTTPD2_VERSION     '2.00'
 
-#define THREAD_COUNT_PREALLOC   		10
-#define THREAD_COUNT_MAX       		200
-#define TIME_KEEP_ALIVE        		60
+#define THREAD_COUNT_PREALLOC     10
+#define THREAD_COUNT_MAX         200
+#define TIME_KEEP_ALIVE          60
 
-#define SESSION_NAME 	 			'USESSID'
-#define SESSION_PREFIX  			'sess_'
-#define SESSION_DURATION 			3600
+#define SESSION_NAME      'USESSID'
+#define SESSION_PREFIX     'sess_'
+#define SESSION_DURATION    3600
 
 #define CR_LF                       (CHR(13)+CHR(10))
 
 #xcommand TEXT <into:TO,INTO> <v> => #pragma __cstream|<v>+=%s
 
 
-//	_d esta definit al meu modul...
-//#xcommand ? [<explist,...>] => _d( [,<explist>] )
-//#xcommand ? [<explist,...>] => if( lDebug, _d( [,<explist>] ), nil )
-//	--------------------------------
+// _d esta definit al meu modul...
+// #xcommand ? [<explist,...>] => _d( [,<explist>] )
+// #xcommand ? [<explist,...>] => if( lDebug, _d( [,<explist>] ), nil )
+// --------------------------------
 
 // No debug
 // #xtranslate QOUT([<x,...>]) =>
@@ -97,121 +97,126 @@ request __vmCountThreads
 
 STATIC oServer
 STATIC hCfg
-STATIC nFiles_Size	:= 0
+STATIC nFiles_Size := 0
 
-//THREAD STATIC s_aSessionData
+// THREAD STATIC s_aSessionData
 THREAD STATIC s_cResult, s_nStatusCode, s_aHeader
-THREAD STATIC cProcError 
+THREAD STATIC cProcError
 THREAD STATIC cFilePrg, cFileHtml
 
 
-//THREAD STATIC s_oSession
+// THREAD STATIC s_oSession
 
-MEMVAR server, get, post, files, cookie, session, httpd
+MEMVAR server, GET, post, files, cookie, session, httpd
 
-FUNC Httpd2() 		
-	oServer := UHttpd2():New()
-RETURN oServer
+FUNCTION Httpd2()
 
-FUNC UHttpd2New()	
-	oServer := UHttpd2():New()
-RETURN oServer
+   oServer := UHttpd2():New()
 
-FUNC UVersion()	; RETURN HTTPD2_VERSION 
+   RETURN oServer
+
+FUNCTION UHttpd2New()
+
+   oServer := UHttpd2():New()
+
+   RETURN oServer
+
+FUNCTION UVersion() ; RETURN HTTPD2_VERSION
 
 CLASS UHttpd2 MODULE FRIENDLY
 
-EXPORTED:
-  METHOD New()    				CONSTRUCTOR
-  METHOD Run(aConfig)
-  METHOD Stop()
-  
-  METHOD SetPort( nPort )		INLINE ::aConfig[ 'Port' ] := if( valtype( nPort ) == 'N', nPort, 80 )
-  METHOD SetSSL( lSSL )		INLINE ::aConfig[ 'SSL' ] := if( valtype( lSSL ) == 'L', lSSL, .F. )
-  METHOD Route( cRoute, bAction, cMethod )
-  METHOD RouteDelete( cRoute ) 
-  METHOD SetDirFiles( cRoute )	
-  METHOD SetCertificate( PrivateKeyFilename, CertificateFilename )
-  METHOD SetErrorStatus( nStatus, cPage, cAjax )
-  
-  
-  METHOD Statistics()
-  METHOD SetInfo( cKey, uValue )	
-  
-  METHOD Dbg(...)   					INLINE if( ::lDebug, _d(...), nil )
-  METHOD Time()   					INLINE time() 
-  METHOD IsInit()   					INLINE ::lInit
+   EXPORTED:
+   METHOD New()        CONSTRUCTOR
+   METHOD Run( aConfig )
+   METHOD Stop()
+
+   METHOD SetPort( nPort )  INLINE ::aConfig[ 'Port' ] := if( ValType( nPort ) == 'N', nPort, 80 )
+   METHOD SetSSL( lSSL )  INLINE ::aConfig[ 'SSL' ] := if( ValType( lSSL ) == 'L', lSSL, .F. )
+   METHOD Route( cRoute, bAction, cMethod )
+   METHOD RouteDelete( cRoute )
+   METHOD SetDirFiles( cRoute )
+   METHOD SetCertificate( PrivateKeyFilename, CertificateFilename )
+   METHOD SetErrorStatus( nStatus, cPage, cAjax )
+
+
+   METHOD Statistics()
+   METHOD SetInfo( cKey, uValue )
+
+   METHOD Dbg( ... )        INLINE if( ::lDebug, _d( ... ), NIL )
+   METHOD Time()        INLINE Time()
+   METHOD IsInit()        INLINE ::lInit
 
 
 
-  DATA 	cError       						INIT ""
-  DATA 	cPathHtml     						INIT ""
-  DATA 	cPathLog      						INIT ""
-  DATA 	cPathTmp							INIT ""
-  
-  DATA 	nTime_Keep_Alive					INIT TIME_KEEP_ALIVE
-  
-  //	Sessions
-  DATA 	cSessionPath  						INIT ""
-  DATA 	cSessionName  						INIT SESSION_NAME
-  DATA 	cSessionPrefix						INIT SESSION_PREFIX
-  DATA 	cSessionSeed  						INIT 'UhHttPPd2@2022!'
-  DATA 	nSessionDuration  					INIT SESSION_DURATION
-  DATA 	nSessionLifeDays					INIT 3
-  DATA 	nSessionGarbage					INIT 1000
-  DATA 	lSessionCrypt						INIT .F.
- 
- 
- 
-  //	Files Upload 
-  DATA 	nfiles_size_garbage_inspector		INIT 2000000	//	kb.
-  DATA 	nfiles_lifeDays					INIT 1
-  DATA 	nfile_max_size						INIT 100000		//	kb.
-  DATA  aFilesAllowed						INIT {}
- 
-  
-  DATA 	bInit 
-  DATA 	lDebug 								INIT .f. 
-  DATA 	lDbfAutoClose						INIT .t. 
-  
-  DATA 	lUtf8								INIT .F. 
-  
-  DATA 	bRX									INIT {|| 'RX not exist' }
-  DATA 	bPostRun 
-  DATA  aInfo								INIT {=>}
-    DATA lInit							INIT .F.
-  
-		 
- 
-  
+   DATA  cError             INIT ""
+   DATA  cPathHtml           INIT ""
+   DATA  cPathLog            INIT ""
+   DATA  cPathTmp       INIT ""
 
-HIDDEN:
-  DATA aConfig					INIT {=>}
-  DATA aErrorRoutes				INIT {}
+   DATA  nTime_Keep_Alive     INIT TIME_KEEP_ALIVE
 
-  DATA aFirewallFilter
-
-  DATA hAccessLog
-  DATA hErrorLog
-  DATA hReq
-  //DATA hSession
-  
-
-  DATA hmtxQueue
-  DATA hmtxLog
-  DATA hmtxSession		// Necesary?
-  DATA hmtxReq
-  DATA hmtxFiles
-
-  DATA hListen
-  DATA hSSLCtx
-//  DATA aSession
-
-  DATA lStop
+   // Sessions
+   DATA  cSessionPath        INIT ""
+   DATA  cSessionName        INIT SESSION_NAME
+   DATA  cSessionPrefix      INIT SESSION_PREFIX
+   DATA  cSessionSeed        INIT 'UhHttPPd2@2022!'
+   DATA  nSessionDuration       INIT SESSION_DURATION
+   DATA  nSessionLifeDays     INIT 3
+   DATA  nSessionGarbage     INIT 1000
+   DATA  lSessionCrypt      INIT .F.
 
 
-  METHOD LogAccess()
-  METHOD LogError(cError)
+
+   // Files Upload
+   DATA  nfiles_size_garbage_inspector  INIT 2000000 // kb.
+   DATA  nfiles_lifeDays     INIT 1
+   DATA  nfile_max_size      INIT 100000  // kb.
+   DATA  aFilesAllowed      INIT {}
+
+
+   DATA  bInit
+   DATA  lDebug         INIT .F.
+   DATA  lDbfAutoClose      INIT .T.
+
+   DATA  lUtf8        INIT .F.
+
+   DATA  bRX         INIT {|| 'RX not exist' }
+   DATA  bPostRun
+   DATA  aInfo        INIT { => }
+   DATA lInit       INIT .F.
+
+
+
+
+
+   HIDDEN:
+   DATA aConfig     INIT { => }
+   DATA aErrorRoutes    INIT {}
+
+   DATA aFirewallFilter
+
+   DATA hAccessLog
+   DATA hErrorLog
+   DATA hReq
+   // DATA hSession
+
+
+   DATA hmtxQueue
+   DATA hmtxLog
+   DATA hmtxSession  // Necesary?
+   DATA hmtxReq
+   DATA hmtxFiles
+
+   DATA hListen
+   DATA hSSLCtx
+// DATA aSession
+
+   DATA lStop
+
+
+   METHOD LogAccess()
+   METHOD LogError( cError )
+
 ENDCLASS
 
 
@@ -219,2638 +224,2699 @@ ENDCLASS
 
 METHOD New() CLASS UHttpd2
 
-	::aConfig := {"SSL"                  => .F., ;
-                   "Port"                 => 80, ;
-                   "BindAddress"          => "0.0.0.0", ;
-                   "AccessLogFilename"    => "access.log", ;
-                   "ErrorLogFilename"     => "error.log", ;
-                   "ErrorBloc"            => {|| NIL}, ;
-                   "Idle"                 => {|| NIL}, ;
-                   "Mount"                => {=>}, ;
-				   "ErrorStatus"          => {}, ;
-                   "PrivateKeyFilename"   => "", ;
-                   "CertificateFilename"  => "", ;
-                   "FirewallFilter"		  => "" ; 		//	"192.168.0.0/16";		//	 "FirewallFilter"       => "0.0.0.0/0" ;
-                  }                   				  
-	
-	::aConfig[ 'Mount' ][ '/api' ]		:= { 'action' => {|hSrv| UWebApi( hSrv, self ) }, 'method' => 'POST', 'regexp' => NIL , 'cargo' => '' }
-	::aConfig[ 'Mount' ][ '/files/*' ]	:= { 'action' => {|hSrv| UProcFiles(HB_DIRBASE() + "/files/" + hSrv[ 'path' ], .F.)}, 'method' => 'GET,POST,PUT,DELETE,OPTIONS', 'regexp' => NIL, 'cargo' => '' }		
+   ::aConfig := { "SSL"                  => .F., ;
+      "Port"                 => 80, ;
+      "BindAddress"          => "0.0.0.0", ;
+      "AccessLogFilename"    => "access.log", ;
+      "ErrorLogFilename"     => "error.log", ;
+      "ErrorBloc"            => {|| NIL }, ;
+      "Idle"                 => {|| NIL }, ;
+      "Mount"                => { => }, ;
+      "ErrorStatus"          => {}, ;
+      "PrivateKeyFilename"   => "", ;
+      "CertificateFilename"  => "", ;
+      "FirewallFilter"    => "" ;   // "192.168.0.0/16";  //  "FirewallFilter"       => "0.0.0.0/0" ;
+      }
 
-	
-	::cPathHtml 	:= HB_DIRBASE() + 'html'
-	::cPathLog 		:= HB_DIRBASE() + '.log'
-	::cSessionPath	:= HB_DIRBASE() + '.sessions'
-	::cPathTmp		:= HB_DIRBASE() + '.tmp'
-	
-	::bInit			:= {|| Qout( 'HTTPD2 Vrs. ' +  HTTPD2_VERSION + ' - ' + HB_COMPILER() + CR_LF + 'Escape for exit...' ) } 
-	
-	s_cResult := ''
+   ::aConfig[ 'Mount' ][ '/api' ]  := { 'action' => {| hSrv | UWebApi( hSrv, self ) }, 'method' => 'POST', 'regexp' => NIL, 'cargo' => '' }
+   ::aConfig[ 'Mount' ][ '/files/*' ] := { 'action' => {| hSrv | UProcFiles( hb_DirBase() + "/files/" + hSrv[ 'path' ], .F. ) }, 'method' => 'GET,POST,PUT,DELETE,OPTIONS', 'regexp' => NIL, 'cargo' => '' }
 
-	cFilePrg	:= ''
-	
-retu SELF 
+
+   ::cPathHtml  := hb_DirBase() + 'html'
+   ::cPathLog   := hb_DirBase() + '.log'
+   ::cSessionPath := hb_DirBase() + '.sessions'
+   ::cPathTmp  := hb_DirBase() + '.tmp'
+
+   ::bInit   := {|| QOut( 'HTTPD2 Vrs. ' +  HTTPD2_VERSION + ' - ' + hb_Compiler() + CR_LF + 'Escape for exit...' ) }
+
+   s_cResult := ''
+
+   cFilePrg := ''
+
+   RETU SELF
 
 METHOD SetDirFiles( cRoute, lIndex ) CLASS UHttpd2
 
-	hb_default( @cRoute, '' )
-	hb_default( @lIndex, .F. )
-	
-	if empty( cRoute )
-		retu nil
-	endif
-	
-	if substr( cRoute, 1, 1 ) != '/'
-		cRoute := '/' + cRoute 
-	endif
+   hb_default( @cRoute, '' )
+   hb_default( @lIndex, .F. )
 
-	::aConfig[ 'Mount' ][ cRoute + '/*' ]	:= { 'action' => {|hSrv| UProcFiles(HB_DIRBASE() + cRoute + "/" + hSrv[ 'path' ], lIndex )}, 'method' => 'GET,POST,PUT,DELETE,OPTIONS', 'regexp' => NIL, 'cargo' => ''  }
-	
-retu cRoute 
+   IF Empty( cRoute )
+      RETU NIL
+   ENDIF
+
+   IF SubStr( cRoute, 1, 1 ) != '/'
+      cRoute := '/' + cRoute
+   ENDIF
+
+   ::aConfig[ 'Mount' ][ cRoute + '/*' ] := { 'action' => {| hSrv | UProcFiles( hb_DirBase() + cRoute + "/" + hSrv[ 'path' ], lIndex ) }, 'method' => 'GET,POST,PUT,DELETE,OPTIONS', 'regexp' => NIL, 'cargo' => ''  }
+
+   RETU cRoute
 
 METHOD SetCertificate( PrivateKeyFilename, CertificateFilename ) CLASS UHttpd2
 
-	hb_default( @PrivateKeyFilename, '' )
-	hb_default( @CertificateFilename, '' )
-	
-	::aConfig[ 'PrivateKeyFilename' ] 	:= PrivateKeyFilename
-	::aConfig[ 'CertificateFilename' ] 	:= CertificateFilename
+   hb_default( @PrivateKeyFilename, '' )
+   hb_default( @CertificateFilename, '' )
 
-retu nil 
+   ::aConfig[ 'PrivateKeyFilename' ]  := PrivateKeyFilename
+   ::aConfig[ 'CertificateFilename' ]  := CertificateFilename
+
+   RETU NIL
 
 METHOD SetErrorStatus( nStatus, cPage, cAjax ) CLASS UHttpd2
 
-	hb_default( @nStatus, 0 )		//	404
-	hb_default( @cPage, '' )		//	error\404.html
-	hb_default( @cAjax, '' )		//	'page not found !'
-	
-	Aadd( ::aConfig[ 'ErrorStatus' ], { 'status' => nStatus, 'page' => cPage, 'ajax' => cAjax } )
-	
-retu nil 
+   hb_default( @nStatus, 0 )  // 404
+   hb_default( @cPage, '' )  // error\404.html
+   hb_default( @cAjax, '' )  // 'page not found !'
+
+   AAdd( ::aConfig[ 'ErrorStatus' ], { 'status' => nStatus, 'page' => cPage, 'ajax' => cAjax } )
+
+   RETU NIL
 
 METHOD Route( cRoute, bAction, cMethod, uCargo ) CLASS UHttpd2
 
-	local cHtml, cExt, pRoute
+   LOCAL cHtml, cExt, pRoute
 
-	hb_default( @cRoute, '' )	
-	hb_default( @cMethod, 'GET,POST,PUT,DELETE,OPTIONS' )	
-	hb_default( @uCargo, '' )	
-	
-	if at( 'OPTIONS', cMethod ) == 0
-		cMethod += ',OPTIONS'
-	endif
-	
-	if empty( cRoute )
-		retu nil
-	endif
-	
-	//	Valid route
-		/*	Bug 
-			'^' --> Init string 
-			'$' --> End string 
-			
-			if not specify '^' expresion regular is true for example with 'wndhello' and 'hello'
-		*/
-	
-		pRoute := HB_RegexComp( '^' + cRoute + '$' )
-			
-		if pRoute == NIL 	
-			Aadd( ::aErrorRoutes, cRoute )			
-			return nil 
-		endif
-		
-	//	-----------------------------				
-	
-	if valtype( bAction ) == 'C'
-	
-		cHtml 	:= bAction
-		cExt 	:= lower( hb_fnameext( cHtml ) )
-	
-		do case
-			case cExt == '.html' .or. cExt == '.htm' 
+   hb_default( @cRoute, '' )
+   hb_default( @cMethod, 'GET,POST,PUT,DELETE,OPTIONS' )
+   hb_default( @uCargo, '' )
 
-				bAction := {|hSrv| ULoadPage( hSrv, cHtml ) }
-				 
-			case cExt == '.prg'
+   IF At( 'OPTIONS', cMethod ) == 0
+      cMethod += ',OPTIONS'
+   ENDIF
 
-				bAction := {|hSrv| ULoadPrg( hSrv, cHtml ) }	
+   IF Empty( cRoute )
+      RETU NIL
+   ENDIF
 
-			case cExt == '.rx'
-			
-				uCargo 	:= cHtml
-				bAction	:= ::bRX
-				 
-			//	
-			//	if hb_isfunction( 'rx_testcode' )
-			//		bAction := &( "{|o,oSrv| rx_testcode(o,oSrv) }" )
-			//	endif
-				 
-			case cExt == ''			
-				
-				if hb_isfunction( cHtml ) 
-		
-					bAction := &( "{|o,oSrv| " + cHtml + "(o,oSrv) }" )																	
-					
-				else
-				
-					//	For example if you define Route( 'examples'	, 'examples/*' ) 
-					//	Objetivo, listar indice del directorio
-				
-					if substr( cHtml, len(cHtml), 1 ) == '*'					
-						bAction := {|| URedirect( cHtml ) }
-					else								
-						bAction := {|| UDo_Error( "Api function doesn't exist. => " + cHtml, nil, 100 ) }					
-					endif
-				
-				endif 
-				 
-		endcase
-		
-	elseif valtype( bAction ) == 'B'
-		//	at moment nothing....
-	else
-		retu nil
-	endif
-	
-	if !( cRoute == '/' ) 	
-		if Substr( cRoute, 1, 1 ) != '/'
-			cRoute := '/' + cRoute 
-		endif
-	endif
-	
-	::aConfig[ 'Mount' ][ cRoute ] := { 'action' => bAction, 'method' => cMethod, 'regexp' => pRoute, 'cargo' => uCargo }
+// Valid route
+  /* Bug
+   '^' --> Init string
+   '$' --> End string
 
-retu nil 
+   if not specify '^' expresion regular is true for example with 'wndhello' and 'hello'
+  */
+
+   pRoute := hb_regexComp( '^' + cRoute + '$' )
+
+   IF pRoute == NIL
+      AAdd( ::aErrorRoutes, cRoute )
+      RETURN NIL
+   ENDIF
+
+// -----------------------------
+
+   IF ValType( bAction ) == 'C'
+
+      cHtml  := bAction
+      cExt  := Lower( hb_FNameExt( cHtml ) )
+
+      DO CASE
+      CASE cExt == '.html' .OR. cExt == '.htm'
+
+         bAction := {| hSrv | ULoadPage( hSrv, cHtml ) }
+
+      CASE cExt == '.prg'
+
+         bAction := {| hSrv | ULoadPrg( hSrv, cHtml ) }
+
+      CASE cExt == '.rx'
+
+         uCargo  := cHtml
+         bAction := ::bRX
+
+//
+// if hb_isfunction( 'rx_testcode' )
+// bAction := &( "{|o,oSrv| rx_testcode(o,oSrv) }" )
+// endif
+
+      CASE cExt == ''
+
+         IF hb_IsFunction( cHtml )
+
+            bAction := &( "{|o,oSrv| " + cHtml + "(o,oSrv) }" )
+
+         ELSE
+
+// For example if you define Route( 'examples' , 'examples/*' )
+// Objetivo, listar indice del directorio
+
+            IF SubStr( cHtml, Len( cHtml ), 1 ) == '*'
+               bAction := {|| URedirect( cHtml ) }
+            ELSE
+               bAction := {|| UDo_Error( "Api function doesn't exist. => " + cHtml, NIL, 100 ) }
+            ENDIF
+
+         ENDIF
+
+      ENDCASE
+
+   ELSEIF ValType( bAction ) == 'B'
+// at moment nothing....
+   ELSE
+      RETU NIL
+   ENDIF
+
+   IF !( cRoute == '/' )
+      IF SubStr( cRoute, 1, 1 ) != '/'
+         cRoute := '/' + cRoute
+      ENDIF
+   ENDIF
+
+   ::aConfig[ 'Mount' ][ cRoute ] := { 'action' => bAction, 'method' => cMethod, 'regexp' => pRoute, 'cargo' => uCargo }
+
+   RETU NIL
 
 METHOD RouteDelete( cRoute ) CLASS UHttpd2
 
-	hb_default( @cRoute, '' )
+   hb_default( @cRoute, '' )
 
-	if !empty( cRoute )
-	
-		cRoute := '/' + cRoute
-	
-		if HB_HHasKey( ::aConfig[ 'Mount' ], cRoute )
+   IF !Empty( cRoute )
 
-			HB_HDel( ::aConfig[ 'Mount' ], cRoute )
-		endif
-	
-	endif
+      cRoute := '/' + cRoute
 
-retu nil 
+      IF hb_HHasKey( ::aConfig[ 'Mount' ], cRoute )
+
+         hb_HDel( ::aConfig[ 'Mount' ], cRoute )
+      ENDIF
+
+   ENDIF
+
+   RETU NIL
 
 METHOD SetInfo( cKey, uValue ) CLASS UHttpd2
 
-	WHILE ! ::lInit 
-		hb_idleSleep( 0.1 )
-	END 		
-	
-	::aInfo[ cKey ] := uValue
+   WHILE ! ::lInit
+      hb_idleSleep( 0.1 )
+   END
 
-RETU NIL 
+   ::aInfo[ cKey ] := uValue
 
+   RETU NIL
 
+METHOD Run( aConfig ) CLASS UHttpd2
 
-METHOD Run(aConfig) CLASS UHttpd2
+   LOCAL hSocket, nI, aI, xValue, aThreads, nJobs, nWorkers
 
-	LOCAL hSocket, nI, aI, xValue, aThreads, nJobs, nWorkers
+   hb_default( @aConfig, {} )
 
-	hb_default( @aConfig, {} )	
-
-	IF ! HB_MTVM()
-		Self:cError := "Multithread support required"
-		RETURN .F.
-	ENDIF
-
-	if len( ::aErrorRoutes ) > 0
-		_t( 'Warning: Error config routes' )
-		for nI := 1 to len( ::aErrorRoutes )
-			_t( '  => ' + ::aErrorRoutes[nI] )
-		next
-		_t( '----------------------------' )
-    endif
-  
-	if !hb_DirExists( ::cPathHtml )
-		HB_DirBuild( ::cPathHtml )
-	endif 
-	
-	if !hb_DirExists( ::cPathLog )
-		HB_DirBuild( ::cPathLog )
-	endif 
-	
-	if !hb_DirExists( ::cSessionPath )
-		HB_DirBuild( ::cSessionPath )		
-	endif 	
-	
-	if !hb_DirExists( ::cPathTmp )
-		HB_DirBuild( ::cPathTmp )			
-	endif 	
-	
-	UFilesTmpCollector( .T. )		//	Del temporally files...
-
-  FOR EACH xValue IN aConfig
-    IF ! HB_HHasKey(Self:aConfig, xValue:__enumKey) .OR. VALTYPE(xValue) != VALTYPE(Self:aConfig[xValue:__enumKey])
-      Self:cError := "Invalid config option '" + xValue:__enumKey + "'"
+   IF ! hb_mtvm()
+      Self:cError := "Multithread support required"
       RETURN .F.
-    ENDIF
-    Self:aConfig[xValue:__enumKey] := xValue
-  NEXT
+   ENDIF
 
-  IF Self:aConfig["SSL"]
+   IF Len( ::aErrorRoutes ) > 0
+      _t( 'Warning: Error config routes' )
+      FOR nI := 1 TO Len( ::aErrorRoutes )
+         _t( '  => ' + ::aErrorRoutes[ nI ] )
+      NEXT
+      _t( '----------------------------' )
+   ENDIF
+
+   IF !hb_DirExists( ::cPathHtml )
+      hb_DirBuild( ::cPathHtml )
+   ENDIF
+
+   IF !hb_DirExists( ::cPathLog )
+      hb_DirBuild( ::cPathLog )
+   ENDIF
+
+   IF !hb_DirExists( ::cSessionPath )
+      hb_DirBuild( ::cSessionPath )
+   ENDIF
+
+   IF !hb_DirExists( ::cPathTmp )
+      hb_DirBuild( ::cPathTmp )
+   ENDIF
+
+   UFilesTmpCollector( .T. )  // Del temporally files...
+
+   FOR EACH xValue IN aConfig
+      IF ! hb_HHasKey( Self:aConfig, xValue:__enumKey ) .OR. ValType( xValue ) != ValType( Self:aConfig[ xValue:__enumKey ] )
+         Self:cError := "Invalid config option '" + xValue:__enumKey + "'"
+         RETURN .F.
+      ENDIF
+      Self:aConfig[ xValue:__enumKey ] := xValue
+   NEXT
+
+   IF Self:aConfig[ "SSL" ]
 #ifndef NO_SSL
 
-	if ! file( Self:aConfig["PrivateKeyFilename"]	)
-		Self:cError := "Certificate - Privetekey is missing !"
-		_t( Self:cError )
-		RETURN .F.		
-	endif
-	
-	if ! file( Self:aConfig["CertificateFilename"]	)
-		Self:cError := "Certificate is missing !"
-		_t( Self:cError )
-		RETURN .F.		
-	endif	
+      IF ! File( Self:aConfig[ "PrivateKeyFilename" ] )
+         Self:cError := "Certificate - Privetekey is missing !"
+         _t( Self:cError )
+         RETURN .F.
+      ENDIF
+
+      IF ! File( Self:aConfig[ "CertificateFilename" ] )
+         Self:cError := "Certificate is missing !"
+         _t( Self:cError )
+         RETURN .F.
+      ENDIF
 
 
 
-    SSL_INIT()
-    DO WHILE RAND_STATUS() != 1
-      RAND_add(STR(hb_random(), 18, 15) + STR(hb_milliseconds(), 20), 1)
-    ENDDO
+      SSL_INIT()
+      DO WHILE RAND_STATUS() != 1
+         RAND_add( Str( hb_Random(), 18, 15 ) + Str( hb_MilliSeconds(), 20 ), 1 )
+      ENDDO
 
-    Self:hSSLCtx := SSL_CTX_NEW(HB_SSL_CTX_NEW_METHOD_SSLV23_SERVER)
-    SSL_CTX_SET_OPTIONS(Self:hSSLCtx, HB_SSL_OP_NO_TLSv1)
+      Self:hSSLCtx := SSL_CTX_NEW( HB_SSL_CTX_NEW_METHOD_SSLV23_SERVER )
+      SSL_CTX_SET_OPTIONS( Self:hSSLCtx, HB_SSL_OP_NO_TLSv1 )
 
-    IF SSL_CTX_USE_PRIVATEKEY_FILE(Self:hSSLCtx, Self:aConfig["PrivateKeyFilename"], HB_SSL_FILETYPE_PEM) != 1
-      Self:cError := "Invalid private key file"
+      IF SSL_CTX_USE_PRIVATEKEY_FILE( Self:hSSLCtx, Self:aConfig[ "PrivateKeyFilename" ], HB_SSL_FILETYPE_PEM ) != 1
+         Self:cError := "Invalid private key file"
+         RETURN .F.
+      ENDIF
+
+      IF SSL_CTX_USE_CERTIFICATE_FILE( Self:hSSLCtx, Self:aConfig[ "CertificateFilename" ], HB_SSL_FILETYPE_PEM ) != 1
+         Self:cError := "Invalid certificate file"
+         RETURN .F.
+      ENDIF
+#else
+      Self:cError := "SSL not supported"
       RETURN .F.
-    ENDIF
-	
-    IF SSL_CTX_USE_CERTIFICATE_FILE(Self:hSSLCtx, Self:aConfig["CertificateFilename"], HB_SSL_FILETYPE_PEM) != 1
-      Self:cError := "Invalid certificate file"
-      RETURN .F.
-    ENDIF
-#else    
-    Self:cError := "SSL not supported"
-    RETURN .F.
 #endif
-  ENDIF
-  
+   ENDIF
 
 
-  IF Self:aConfig["Port"] < 1 .OR. Self:aConfig["Port"] > 65535
-    Self:cError := "Invalid port number"
-    RETURN .F.
-  ENDIF
 
-  IF ParseFirewallFilter(Self:aConfig["FirewallFilter"], @aI)
-    Self:aFirewallFilter := aI
-  ELSE
-    Self:cError := "Invalid firewall filter"
-    RETURN .F.
-  ENDIF
-  
-  
-  Self:hReq 		:= { 'ip' => {=>}, 'proc' => {=>} , 'func' => {=>} }
-  
+   IF Self:aConfig[ "Port" ] < 1 .OR. Self:aConfig[ "Port" ] > 65535
+      Self:cError := "Invalid port number"
+      RETURN .F.
+   ENDIF
+
+   IF ParseFirewallFilter( Self:aConfig[ "FirewallFilter" ], @aI )
+      Self:aFirewallFilter := aI
+   ELSE
+      Self:cError := "Invalid firewall filter"
+      RETURN .F.
+   ENDIF
+
+
+   Self:hReq   := { 'ip' => { => }, 'proc' => { => }, 'func' => { => } }
+
   /*
-  hCfg	:= { 'sessionpath' 		=> Self:cSessionPath ,;			 
-			 'sessionduration' 	=> Self:nSessionDuration ,;
-			 'sessionlifedays' 	=> Self:nSessionLifeDays ,;
-			 'sessiongarbage' 	=> Self:nSessionGarbage ;
-			} 				
-	*/
+  hCfg := { 'sessionpath'   => Self:cSessionPath ,;
+    'sessionduration'  => Self:nSessionDuration ,;
+    'sessionlifedays'  => Self:nSessionLifeDays ,;
+    'sessiongarbage'  => Self:nSessionGarbage ;
+   }
+ */
 
-  IF (Self:hAccessLog := FOPEN(Self:cPathLog + '/' + Self:aConfig["AccessLogFilename"], FO_CREAT + FO_WRITE)) == -1
-    Self:cError :=  "Access log file open error " + LTRIM(STR(FERROR()))
-    RETURN .F.
-  ENDIF
-  FSEEK(Self:hAccessLog, 0, FS_END)
+   IF ( Self:hAccessLog := FOpen( Self:cPathLog + '/' + Self:aConfig[ "AccessLogFilename" ], FO_CREAT + FO_WRITE ) ) == -1
+      Self:cError :=  "Access log file open error " + LTrim( Str( FError() ) )
+      RETURN .F.
+   ENDIF
+   FSeek( Self:hAccessLog, 0, FS_END )
 
-  IF (Self:hErrorLog := FOPEN(Self:cPathLog + '/' + Self:aConfig["ErrorLogFilename"], FO_CREAT + FO_WRITE)) == -1
-    Self:cError :=  "Error log file open error " + LTRIM(STR(FERROR()))
-    FCLOSE(Self:hAccessLog)
-    RETURN .F.
-  ENDIF
-  FSEEK(Self:hErrorLog, 0, FS_END)
+   IF ( Self:hErrorLog := FOpen( Self:cPathLog + '/' + Self:aConfig[ "ErrorLogFilename" ], FO_CREAT + FO_WRITE ) ) == -1
+      Self:cError :=  "Error log file open error " + LTrim( Str( FError() ) )
+      FClose( Self:hAccessLog )
+      RETURN .F.
+   ENDIF
+   FSeek( Self:hErrorLog, 0, FS_END )
 
-  Self:hmtxQueue   	:= hb_mutexCreate()
-  Self:hmtxLog     	:= hb_mutexCreate()
-  Self:hmtxSession		:= hb_mutexCreate()	//NEcesary?
-  Self:hmtxReq 		:= hb_mutexCreate()
-  Self:hmtxFiles 		:= hb_mutexCreate()
+   Self:hmtxQueue    := hb_mutexCreate()
+   Self:hmtxLog      := hb_mutexCreate()
+   Self:hmtxSession  := hb_mutexCreate() // NEcesary?
+   Self:hmtxReq   := hb_mutexCreate()
+   Self:hmtxFiles   := hb_mutexCreate()
 
-  IF EMPTY(Self:hListen := hb_socketOpen()) == NIL
-    Self:cError :=  "Socket create error: " + hb_socketErrorString()
-    FCLOSE(Self:hErrorLog)
-    FCLOSE(Self:hAccessLog)
-    RETURN .F.
-  ENDIF
-	
-  IF ! hb_socketBind(Self:hListen, {HB_SOCKET_AF_INET, Self:aConfig["BindAddress"], Self:aConfig["Port"]})
-    Self:cError :=  "Bind error: " + hb_socketErrorString()
-    hb_socketClose(Self:hListen)
-    FCLOSE(Self:hErrorLog)
-    FCLOSE(Self:hAccessLog)
-    RETURN .F.
-  ENDIF
+   IF Empty( Self:hListen := hb_socketOpen() ) == NIL
+      Self:cError :=  "Socket create error: " + hb_socketErrorString()
+      FClose( Self:hErrorLog )
+      FClose( Self:hAccessLog )
+      RETURN .F.
+   ENDIF
 
-  IF ! hb_socketListen(Self:hListen)
-    Self:cError :=  "Listen error: " + hb_socketErrorString()
-    hb_socketClose(Self:hListen)
-    FCLOSE(Self:hErrorLog)
-    FCLOSE(Self:hAccessLog)
-    RETURN .F.
-  ENDIF
+   IF ! hb_socketBind( Self:hListen, { HB_SOCKET_AF_INET, Self:aConfig[ "BindAddress" ], Self:aConfig[ "Port" ] } )
+      Self:cError :=  "Bind error: " + hb_socketErrorString()
+      hb_socketClose( Self:hListen )
+      FClose( Self:hErrorLog )
+      FClose( Self:hAccessLog )
+      RETURN .F.
+   ENDIF
 
-  
-  aThreads := {}
-  FOR nI := 1 TO THREAD_COUNT_PREALLOC
-    AADD(aThreads, hb_threadStart(HB_THREAD_INHERIT_PUBLIC, @ProcessConnection(), Self))
-  NEXT
-
-	_t( '================' )
-	_t( 'HTTPD2 Vrs. ' +  HTTPD2_VERSION )
-	_t( '================' )  
-
-	::aInfo[ 'sessionpath'] 	:= Self:cSessionPath 	
-	::aInfo[ 'sessionduration']	:=  Self:nSessionDuration 
-	::aInfo[ 'sessionlifedays']	:=  Self:nSessionLifeDays 
-	::aInfo[ 'sessiongarbage']	:=  Self:nSessionGarbage  
-	::aInfo[ 'port' ]			:= ::aConfig[ 'Port']
-	::aInfo[ 'ssl'] 			:= ::aConfig[ 'SSL']
-	::aInfo[ 'version'] 		:= HTTPD2_VERSION
-	::aInfo[ 'start'] 			:= dtoc(date()) + ' ' + time()
-	::aInfo[ 'debug'] 			:= ::lDebug
-	::aInfo[ 'utf8'] 			:= ::lUtf8	
-	::aInfo[ 'errorstatus'] 	:= ::aConfig[ 'ErrorStatus']
-	::aInfo[ 'websocket'] 		:= .F.
-
-  //::aInfo := hCfg
-  
-  if valtype( Self:bInit ) == 'B'		
-	eval( Self:bInit, ::aInfo )
-  endif  
-
-  ::lInit := .T.  
+   IF ! hb_socketListen( Self:hListen )
+      Self:cError :=  "Listen error: " + hb_socketErrorString()
+      hb_socketClose( Self:hListen )
+      FClose( Self:hErrorLog )
+      FClose( Self:hAccessLog )
+      RETURN .F.
+   ENDIF
 
 
-  Self:lStop := .F.
-//  Self:aSession := {=>}
+   aThreads := {}
+   FOR nI := 1 TO THREAD_COUNT_PREALLOC
+      AAdd( aThreads, hb_threadStart( HB_THREAD_INHERIT_PUBLIC, @ProcessConnection(), Self ) )
+   NEXT
 
-  DO WHILE .T.
-  
-  	
-    IF EMPTY(hSocket := hb_socketAccept(Self:hListen,, 1000))
-      IF hb_socketGetError() == HB_SOCKET_ERR_TIMEOUT
-        EVAL(Self:aConfig["Idle"], Self)
-        IF Self:lStop
-			EXIT
-        ENDIF
+   _t( '================' )
+   _t( 'HTTPD2 Vrs. ' +  HTTPD2_VERSION )
+   _t( '================' )
+
+   ::aInfo[ 'sessionpath' ]   := Self:cSessionPath
+   ::aInfo[ 'sessionduration' ]  :=  Self:nSessionDuration
+   ::aInfo[ 'sessionlifedays' ]  :=  Self:nSessionLifeDays
+   ::aInfo[ 'sessiongarbage' ]  :=  Self:nSessionGarbage
+   ::aInfo[ 'port' ]    := ::aConfig[ 'Port' ]
+   ::aInfo[ 'ssl' ]     := ::aConfig[ 'SSL' ]
+   ::aInfo[ 'version' ]    := HTTPD2_VERSION
+   ::aInfo[ 'start' ]     := DToC( Date() ) + ' ' + Time()
+   ::aInfo[ 'debug' ]     := ::lDebug
+   ::aInfo[ 'utf8' ]     := ::lUtf8
+   ::aInfo[ 'errorstatus' ]   := ::aConfig[ 'ErrorStatus' ]
+   ::aInfo[ 'websocket' ]    := .F.
+   ::aInfo[ 'PrivateKeyFilename' ] := ::aConfig[ 'PrivateKeyFilename' ]
+   ::aInfo[ 'CertificateFilename' ] := ::aConfig[ 'CertificateFilename' ]
+
+   // ::aInfo := hCfg
+
+   IF ValType( Self:bInit ) == 'B'
+      Eval( Self:bInit, ::aInfo )
+   ENDIF
+
+   ::lInit := .T.
+
+
+   Self:lStop := .F.
+// Self:aSession := {=>}
+
+   DO WHILE .T.
+
+
+      IF Empty( hSocket := hb_socketAccept( Self:hListen,, 1000 ) )
+         IF hb_socketGetError() == HB_SOCKET_ERR_TIMEOUT
+            Eval( Self:aConfig[ "Idle" ], Self )
+            IF Self:lStop
+               EXIT
+            ENDIF
+         ELSE
+            Self:LogError( "[error] Accept error: " + hb_socketErrorString() )
+         ENDIF
       ELSE
-        Self:LogError("[error] Accept error: " + hb_socketErrorString())
-      ENDIF
-    ELSE
-	
-      Self:Dbg( "New connection => " + hb_NumToHex( hSocket ) )         
-	  
-      IF hb_mutexQueueInfo(Self:hmtxQueue, @nWorkers, @nJobs) .AND. ;
-         LEN(aThreads) < THREAD_COUNT_MAX .AND. ;
-         nJobs >= nWorkers
-        AADD(aThreads, hb_threadStart(HB_THREAD_INHERIT_PUBLIC, @ProcessConnection(), Self))
-      ENDIF
-      hb_mutexNotify(Self:hmtxQueue, hSocket)
-    ENDIF
-  ENDDO
-  hb_socketClose(Self:hListen)
-	
-  // End child threads
-  AEVAL(aThreads, {|| hb_mutexNotify(Self:hmtxQueue, NIL)})
-  AEVAL(aThreads, {|h| hb_threadJoin(h)})
 
-  FCLOSE(Self:hErrorLog)
-  FCLOSE(Self:hAccessLog)
-  
-  	
-RETURN .T.
+         Self:Dbg( "New connection => " + hb_NumToHex( hSocket ) )
+
+         IF hb_mutexQueueInfo( Self:hmtxQueue, @nWorkers, @nJobs ) .AND. ;
+               Len( aThreads ) < THREAD_COUNT_MAX .AND. ;
+               nJobs >= nWorkers
+            AAdd( aThreads, hb_threadStart( HB_THREAD_INHERIT_PUBLIC, @ProcessConnection(), Self ) )
+         ENDIF
+         hb_mutexNotify( Self:hmtxQueue, hSocket )
+      ENDIF
+   ENDDO
+   hb_socketClose( Self:hListen )
+
+   // End child threads
+   AEval( aThreads, {|| hb_mutexNotify( Self:hmtxQueue, NIL ) } )
+   AEval( aThreads, {| h | hb_threadJoin( h ) } )
+
+   FClose( Self:hErrorLog )
+   FClose( Self:hAccessLog )
+
+   RETURN .T.
 
 
 METHOD Stop() CLASS UHttpd2
-  ::Dbg( "stopping" )
-  Self:lStop := .T.
-RETURN NIL
+
+   ::Dbg( "stopping" )
+   Self:lStop := .T.
+
+   RETURN NIL
 
 
-METHOD LogError(cError) CLASS UHttpd2
-  hb_mutexLock(Self:hmtxLog)
-  FWRITE(Self:hErrorLog, ">>> " + DTOS(DATE()) + " " + TIME() + " " + cError + " " + HB_OSNewLine())
-  hb_mutexUnlock(Self:hmtxLog)
-RETURN NIL
+METHOD LogError( cError ) CLASS UHttpd2
+
+   hb_mutexLock( Self:hmtxLog )
+   FWrite( Self:hErrorLog, ">>> " + DToS( Date() ) + " " + Time() + " " + cError + " " + hb_osNewLine() )
+   hb_mutexUnlock( Self:hmtxLog )
+
+   RETURN NIL
 
 
 METHOD LogAccess() CLASS UHttpd2
-LOCAL cDate := DTOS(DATE()), cTime := TIME()
-  hb_mutexLock(Self:hmtxLog)
-  FWRITE(Self:hAccessLog, ;
-         server["REMOTE_ADDR"] + " - - [" + RIGHT(cDate, 2) + "/" + ;
-         {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}[VAL(SUBSTR(cDate, 5, 2))] + ;
-         "/" + LEFT(cDate, 4) + ":" + cTime + ' +0000] "' + server["REQUEST_ALL"] + '" ' + ;
-         LTRIM(STR(s_nStatusCode)) + " " + LTRIM(STR(LEN(s_cResult))) + ;
-         ' "' + server["HTTP_REFERER"] + '" "' + server["HTTP_USER_AGENT"] + ;
-         '"' + HB_OSNewLine())
-  hb_mutexUnlock(Self:hmtxLog)
-RETURN NIL
+
+   LOCAL cDate := DToS( Date() ), cTime := Time()
+
+   hb_mutexLock( Self:hmtxLog )
+   FWrite( Self:hAccessLog, ;
+      server[ "REMOTE_ADDR" ] + " - - [" + Right( cDate, 2 ) + "/" + ;
+      { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" }[ Val( SubStr( cDate, 5, 2 ) ) ] + ;
+      "/" + Left( cDate, 4 ) + ":" + cTime + ' +0000] "' + server[ "REQUEST_ALL" ] + '" ' + ;
+      LTrim( Str( s_nStatusCode ) ) + " " + LTrim( Str( Len( s_cResult ) ) ) + ;
+      ' "' + server[ "HTTP_REFERER" ] + '" "' + server[ "HTTP_USER_AGENT" ] + ;
+      '"' + hb_osNewLine() )
+   hb_mutexUnlock( Self:hmtxLog )
+
+   RETURN NIL
 
 METHOD Statistics() CLASS UHttpd2
 
-	local hReq := {=>}
+   LOCAL hReq := { => }
 
-	hb_mutexLock(Self:hmtxReq)
-	
-		hReq := Self:hReq
-	
-		//_d( 'STATISTICS' )
-		//_d( Self:hReq )
-		//_d( Self:hReqIP )
+   hb_mutexLock( Self:hmtxReq )
 
-	hb_mutexUnlock(Self:hmtxReq)	
-	
-RETURN hReq
+   hReq := Self:hReq
 
+// _d( 'STATISTICS' )
+// _d( Self:hReq )
+// _d( Self:hReqIP )
 
-STATIC FUNC IPAddr2Num(cIP)
-LOCAL aA, n1, n2, n3, n4
-  aA := hb_regex("^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$", cIP)
-  IF LEN(aA) == 5 .AND. (n1 := VAL(aA[2])) <= 255 .AND. (n2 := VAL(aA[3])) <= 255 .AND. ;
-                        (n3 := VAL(aA[4])) <= 255 .AND. (n4 := VAL(aA[5])) <= 255
-    RETURN (((n1 * 256) + n2) * 256 + n3) * 256 + n4
-  ENDIF
-RETURN NIL
+   hb_mutexUnlock( Self:hmtxReq )
+
+   RETURN hReq
 
 
-STATIC FUNC ParseFirewallFilter(cFilter, aFilter)
-LOCAL cExpr, nI, cI, nPrefix, nAddr, nAddr2, nPos, nPos2, lDeny, aDeny, aI
+STATIC FUNCTION IPAddr2Num( cIP )
 
-  aFilter := {=>}
-  aDeny := {}
-  FOR EACH cExpr IN hb_aTokens(cFilter, " ")
-    IF ! EMPTY(cExpr)
-      IF lDeny := (LEFT(cExpr, 1) == "!")
-        cExpr := SUBSTR(cExpr, 2)
-      ENDIF
-      IF (nI := AT("/", cExpr)) > 0
-        cI := SUBSTR(cExpr, nI + 1)
-        cExpr := LEFT(cExpr, nI - 1)
-        IF "." $ cI
-          IF (nI := IPAddr2Num(cI)) == NIL
+   LOCAL aA, n1, n2, n3, n4
+
+   aA := hb_regex( "^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$", cIP )
+   IF Len( aA ) == 5 .AND. ( n1 := Val( aA[ 2 ] ) ) <= 255 .AND. ( n2 := Val( aA[ 3 ] ) ) <= 255 .AND. ;
+         ( n3 := Val( aA[ 4 ] ) ) <= 255 .AND. ( n4 := Val( aA[ 5 ] ) ) <= 255
+      RETURN ( ( ( n1 * 256 ) + n2 ) * 256 + n3 ) * 256 + n4
+   ENDIF
+
+   RETURN NIL
+
+
+STATIC FUNCTION ParseFirewallFilter( cFilter, aFilter )
+
+   LOCAL cExpr, nI, cI, nPrefix, nAddr, nAddr2, nPos, nPos2, lDeny, aDeny, aI
+
+   aFilter := { => }
+   aDeny := {}
+   FOR EACH cExpr IN hb_ATokens( cFilter, " " )
+      IF ! Empty( cExpr )
+         IF lDeny := ( Left( cExpr, 1 ) == "!" )
+            cExpr := SubStr( cExpr, 2 )
+         ENDIF
+         IF ( nI := At( "/", cExpr ) ) > 0
+            cI := SubStr( cExpr, nI + 1 )
+            cExpr := Left( cExpr, nI - 1 )
+            IF "." $ cI
+               IF ( nI := IPAddr2Num( cI ) ) == NIL
+                  RETURN .F.
+               ENDIF
+               nPrefix := 32
+               DO WHILE hb_bitAnd( nI, 1 ) == 0
+                  nPrefix--
+                  nI := hb_bitShift( nI, - 1 )
+               ENDDO
+               IF nI + 1 != hb_bitShift( 1, nPrefix )
+                  RETURN .F.
+               ENDIF
+            ELSE
+               nPrefix := Val( cI )
+               IF nPrefix < 0 .OR. nPrefix > 32 .OR. !( hb_ntos( nPrefix ) == cI )
+                  RETURN .F.
+               ENDIF
+            ENDIF
+         ELSE
+            nPrefix := 32
+         ENDIF
+         IF ( nAddr := IPAddr2Num( cExpr ) ) == NIL
             RETURN .F.
-          ENDIF
-          nPrefix := 32
-          DO WHILE hb_bitAnd(nI, 1) == 0
-            nPrefix--
-            nI := hb_bitShift(nI, -1)
-          ENDDO
-          IF nI + 1 != hb_bitShift(1, nPrefix)
-            RETURN .F.
-          ENDIF
-        ELSE
-          nPrefix := VAL(cI)
-          IF nPrefix < 0 .OR. nPrefix > 32 .OR. ! (HB_NTOS(nPrefix) == cI)
-            RETURN .F.
-          ENDIF
-        ENDIF
-      ELSE
-        nPrefix := 32
+         ENDIF
+         nPrefix := 0x100000000 - hb_bitShift( 1, 32 - nPrefix )
+
+         // Remove unnecessary network address part
+         nAddr := hb_bitAnd( nAddr, nPrefix )
+         nAddr2 := hb_bitOr( nAddr, hb_bitXor( nPrefix, 0xFFFFFFFF ) )
+
+         IF lDeny
+            AAdd( aDeny, { nAddr, nAddr2 } )
+         ELSE
+            // Add to filter
+            hb_HHasKey( aFilter, nAddr, @nPos )
+            IF nPos == 0 .OR. hb_HValueAt( aFilter, nPos ) + 1 < nAddr
+               // Does not overlap/glue with nPos
+               // So, add new interval
+               aFilter[ nAddr ] := nAddr2
+               nPos++
+            ENDIF
+            hb_HHasKey( aFilter, nAddr2 + 1, @nPos2 )
+            // Merge and delete inner subintervals
+            aFilter[ hb_HKeyAt( aFilter, nPos ) ] := Max( hb_HValueAt( aFilter, nPos2 ), nAddr2 )
+            DO WHILE nPos2-->nPos
+               hb_HDelAt( aFilter, nPos + 1 )
+            ENDDO
+         ENDIF
       ENDIF
-      IF (nAddr := IPAddr2Num(cExpr)) == NIL
-        RETURN .F.
+   NEXT
+
+   FOR EACH aI IN aDeny
+      nAddr := aI[ 1 ]
+      nAddr2 := aI[ 2 ]
+
+      // Delete from filter
+      hb_HHasKey( aFilter, nAddr, @nPos )
+      IF nPos == 0 .OR. hb_HValueAt( aFilter, nPos ) < nAddr
+         nPos++
       ENDIF
-      nPrefix := 0x100000000 - hb_bitShift(1, 32 - nPrefix)
-
-      // Remove unnecessary network address part
-      nAddr := hb_bitAnd(nAddr, nPrefix)
-      nAddr2 := hb_bitOr(nAddr, hb_bitXor(nPrefix, 0xFFFFFFFF))
-
-      IF lDeny
-        AADD(aDeny, {nAddr, nAddr2})
-      ELSE
-        // Add to filter
-        HB_HHasKey(aFilter, nAddr, @nPos)
-        IF nPos == 0 .OR. HB_HValueAt(aFilter, nPos) + 1 < nAddr
-          // Does not overlap/glue with nPos
-          // So, add new interval
-          aFilter[nAddr] := nAddr2
-          nPos++
-        ENDIF
-        HB_HHasKey(aFilter, nAddr2 + 1, @nPos2)
-        // Merge and delete inner subintervals
-        aFilter[HB_HKeyAt(aFilter, nPos)] := MAX(HB_HValueAt(aFilter, nPos2), nAddr2)
-        DO WHILE nPos2-- > nPos
-          HB_HDelAt(aFilter, nPos + 1)
-        ENDDO
+      IF nPos > Len( aFilter )
+         LOOP
       ENDIF
-    ENDIF
-  NEXT
 
-  FOR EACH aI IN aDeny
-    nAddr := aI[1]
-    nAddr2 := aI[2]
+      hb_HHasKey( aFilter, nAddr2, @nPos2 )
+      IF nPos2 > 0 .AND. hb_HValueAt( aFilter, nPos2 ) > nAddr2
+         aFilter[ nAddr2 + 1 ] := hb_HValueAt( aFilter, nPos2 )
+      ENDIF
+      IF nAddr > hb_HKeyAt( aFilter, nPos )
+         aFilter[ hb_HKeyAt( aFilter, nPos ) ] := nAddr - 1
+         nPos++
+      ENDIF
+      DO WHILE nPos2--> = nPos
+         hb_HDelAt( aFilter, nPos )
+      ENDDO
+   NEXT
 
-    // Delete from filter
-    HB_HHasKey(aFilter, nAddr, @nPos)
-    IF nPos == 0 .OR. HB_HValueAt(aFilter, nPos) < nAddr
-      nPos++
-    ENDIF 
-    IF nPos > LEN(aFilter)
-      LOOP
-    ENDIF
-   
-    HB_HHasKey(aFilter, nAddr2, @nPos2) 
-    IF nPos2 > 0 .AND. HB_HValueAt(aFilter, nPos2) > nAddr2
-      aFilter[nAddr2 + 1] := HB_HValueAt(aFilter, nPos2)
-    ENDIF
-    IF nAddr > HB_HKeyAt(aFilter, nPos)
-      aFilter[HB_HKeyAt(aFilter, nPos)] := nAddr - 1
-      nPos++
-    ENDIF
-    DO WHILE nPos2-- >= nPos
-      HB_HDelAt(aFilter, nPos)
-    ENDDO
-  NEXT
-RETURN .T.
+   RETURN .T.
 
 
 
 #ifndef NO_SSL
 
-//STATIC FUNC MY_SSL_READ(hSSL, hSocket, cBuf, nTimeout, nError)
-FUNC MY_SSL_READ(hSSL, hSocket, cBuf, nTimeout, nError)
-LOCAL nErr, nLen
+// STATIC FUNCTION MY_SSL_READ(hSSL, hSocket, cBuf, nTimeout, nError)
+FUNCTION MY_SSL_READ( hSSL, hSocket, cBuf, nTimeout, nError )
 
-  nLen := SSL_READ(hSSL, @cBuf)
-  IF nLen < 0
-    nErr := SSL_GET_ERROR(hSSL, nLen)
-    IF nErr == HB_SSL_ERROR_WANT_READ
-      nErr := hb_socketSelectRead(hSocket, nTimeout)
-      IF nErr < 0
-        nError := hb_socketGetError()
-      ELSE  // Both cases: data received and timeout
-        nError := HB_SOCKET_ERR_TIMEOUT
-      ENDIF
-      RETURN -1
-    ELSEIF nErr == HB_SSL_ERROR_WANT_WRITE
-      nErr := hb_socketSelectWrite(hSocket, nTimeout)
-      IF nErr < 0
-        nError := hb_socketGetError()
-      ELSE  // Both cases: data sent and timeout
-        nError := HB_SOCKET_ERR_TIMEOUT
-      ENDIF
-      RETURN -1
-    ELSE
-      //? "SSL_READ() error", nErr
-      nError := 1000 + nErr
-      RETURN -1
-    ENDIF
-  ENDIF
-RETURN nLen
+   LOCAL nErr, nLen
 
-
-//STATIC FUNC MY_SSL_WRITE(hSSL, hSocket, cBuf, nTimeout, nError)
-FUNC MY_SSL_WRITE(hSSL, hSocket, cBuf, nTimeout, nError)
-LOCAL nErr, nLen
-
-  nLen := SSL_WRITE(hSSL, cBuf)
-  IF nLen <= 0
-    nErr := SSL_GET_ERROR(hSSL, nLen)
-    IF nErr == HB_SSL_ERROR_WANT_READ
-      nErr := hb_socketSelectRead(hSocket, nTimeout)
-      IF nErr < 0
-        nError := hb_socketGetError()
-        RETURN -1
-      ELSE  // Both cases: data received and timeout
-        RETURN 0
-      ENDIF
-    ELSEIF nErr == HB_SSL_ERROR_WANT_WRITE
-      nErr := hb_socketSelectWrite(hSocket, nTimeout)
-      IF nErr < 0
-        nError := hb_socketGetError()
-        RETURN -1
-      ELSE  // Both cases: data sent and timeout
-        RETURN 0
-      ENDIF
-    ELSE
-      //? "SSL_WRITE() error", nErr
-      nError := 1000 + nErr
-      RETURN -1
-    ENDIF
-  ENDIF
-RETURN nLen
-
-
-STATIC FUNC MY_SSL_ACCEPT(hSSL, hSocket, nTimeout)
-LOCAL nErr
-  nErr := SSL_ACCEPT(hSSL)
-  IF nErr > 0
-    RETURN 0
-  ELSEIF nErr < 0
-    nErr := SSL_GET_ERROR(hSSL, nErr)
-    IF nErr == HB_SSL_ERROR_WANT_READ
-      nErr := hb_socketSelectRead(hSocket, nTimeout)
-      IF nErr < 0
-        nErr := hb_socketGetError()
+   nLen := SSL_READ( hSSL, @cBuf )
+   IF nLen < 0
+      nErr := SSL_GET_ERROR( hSSL, nLen )
+      IF nErr == HB_SSL_ERROR_WANT_READ
+         nErr := hb_socketSelectRead( hSocket, nTimeout )
+         IF nErr < 0
+            nError := hb_socketGetError()
+         ELSE  // Both cases: data received and timeout
+            nError := HB_SOCKET_ERR_TIMEOUT
+         ENDIF
+         RETURN -1
+      ELSEIF nErr == HB_SSL_ERROR_WANT_WRITE
+         nErr := hb_socketSelectWrite( hSocket, nTimeout )
+         IF nErr < 0
+            nError := hb_socketGetError()
+         ELSE  // Both cases: data sent and timeout
+            nError := HB_SOCKET_ERR_TIMEOUT
+         ENDIF
+         RETURN -1
       ELSE
-        nErr := HB_SOCKET_ERR_TIMEOUT
+         // ? "SSL_READ() error", nErr
+         nError := 1000 + nErr
+         RETURN -1
       ENDIF
-    ELSEIF nErr == HB_SSL_ERROR_WANT_WRITE
-      nErr := hb_socketSelectWrite(hSocket, nTimeout)
-      IF nErr < 0
-        nErr := hb_socketGetError()
+   ENDIF
+
+   RETURN nLen
+
+
+// STATIC FUNCTION MY_SSL_WRITE(hSSL, hSocket, cBuf, nTimeout, nError)
+FUNCTION MY_SSL_WRITE( hSSL, hSocket, cBuf, nTimeout, nError )
+
+   LOCAL nErr, nLen
+
+   nLen := SSL_WRITE( hSSL, cBuf )
+   IF nLen <= 0
+      nErr := SSL_GET_ERROR( hSSL, nLen )
+      IF nErr == HB_SSL_ERROR_WANT_READ
+         nErr := hb_socketSelectRead( hSocket, nTimeout )
+         IF nErr < 0
+            nError := hb_socketGetError()
+            RETURN -1
+         ELSE  // Both cases: data received and timeout
+            RETURN 0
+         ENDIF
+      ELSEIF nErr == HB_SSL_ERROR_WANT_WRITE
+         nErr := hb_socketSelectWrite( hSocket, nTimeout )
+         IF nErr < 0
+            nError := hb_socketGetError()
+            RETURN -1
+         ELSE  // Both cases: data sent and timeout
+            RETURN 0
+         ENDIF
       ELSE
-        nErr := HB_SOCKET_ERR_TIMEOUT
+         // ? "SSL_WRITE() error", nErr
+         nError := 1000 + nErr
+         RETURN -1
       ENDIF
-    ELSE
-      //? "SSL_ACCEPT() error", nErr
+   ENDIF
+
+   RETURN nLen
+
+
+STATIC FUNCTION MY_SSL_ACCEPT( hSSL, hSocket, nTimeout )
+
+   LOCAL nErr
+
+   nErr := SSL_ACCEPT( hSSL )
+   IF nErr > 0
+      RETURN 0
+   ELSEIF nErr < 0
+      nErr := SSL_GET_ERROR( hSSL, nErr )
+      IF nErr == HB_SSL_ERROR_WANT_READ
+         nErr := hb_socketSelectRead( hSocket, nTimeout )
+         IF nErr < 0
+            nErr := hb_socketGetError()
+         ELSE
+            nErr := HB_SOCKET_ERR_TIMEOUT
+         ENDIF
+      ELSEIF nErr == HB_SSL_ERROR_WANT_WRITE
+         nErr := hb_socketSelectWrite( hSocket, nTimeout )
+         IF nErr < 0
+            nErr := hb_socketGetError()
+         ELSE
+            nErr := HB_SOCKET_ERR_TIMEOUT
+         ENDIF
+      ELSE
+         // ? "SSL_ACCEPT() error", nErr
+         nErr := 1000 + nErr
+      ENDIF
+   ELSE /* nErr == 0 */
+      nErr := SSL_GET_ERROR( hSSL, nErr )
+      // ? "SSL_ACCEPT() shutdown error", nErr
       nErr := 1000 + nErr
-    ENDIF
-  ELSE /* nErr == 0 */
-    nErr := SSL_GET_ERROR( hSSL, nErr )
-    //? "SSL_ACCEPT() shutdown error", nErr
-    nErr := 1000 + nErr
-  ENDIF
-RETURN nErr
+   ENDIF
+
+   RETURN nErr
 
 #endif
 
-STATIC FUNC ProcessConnection(oServer)
-LOCAL hSocket, cRequest, aI, nLen, nErr, nTime, nReqLen, cBuf, aServer
-LOCAL aMount, cMount, aMethods, lPassMethod, n, nRoutes, aPair, aRoute, aMatch, cMethod
+STATIC FUNCTION ProcessConnection( oServer )
+
+   LOCAL hSocket, cRequest, aI, nLen, nErr, nTime, nReqLen, cBuf, aServer
+   LOCAL aMount, cMount, aMethods, lPassMethod, n, nRoutes, aPair, aRoute, aMatch, cMethod
 #ifndef NO_SSL
-LOCAL hSSL
+   LOCAL hSSL
 #endif
 
-  ERRORBLOCK({|o| UErrorHandler(o, oServer)})
+   ErrorBlock( {| o | UErrorHandler( o, oServer ) } )
 
-  PRIVATE server, get, post, files, cookie, session, httpd
+   PRIVATE server, GET, post, files, cookie, session, httpd
 
-  httpd := oServer
+   httpd := oServer
 
-  /* main worker thread loop */
-  DO WHILE .T.
-    hb_mutexSubscribe(oServer:hmtxQueue,, @hSocket)
-    IF hSocket == NIL
-      EXIT
-    ENDIF
+   /* main worker thread loop */
+   DO WHILE .T.
+      hb_mutexSubscribe( oServer:hmtxQueue,, @hSocket )
+      IF hSocket == NIL
+         EXIT
+      ENDIF
 
-    /* Prepare server variable and clone it for every query, 
+    /* Prepare server variable and clone it for every query,
        because request handler script can ruin variable value */
-    aServer := {=>}
-    aServer["HTTPS"] := oServer:aConfig["SSL"]
-    IF ! EMPTY(aI := hb_socketGetPeerName(hSocket))
-      aServer["REMOTE_ADDR"] := aI[2]
-      aServer["REMOTE_HOST"] := aServer["REMOTE_ADDR"]  // no reverse DNS
-      aServer["REMOTE_PORT"] := aI[3]
-    ENDIF
-    IF ! EMPTY(aI := hb_socketGetSockName(hSocket))
-      aServer["SERVER_ADDR"] := aI[2]
-      aServer["SERVER_PORT"] := aI[3]
-    ENDIF
-	
-
-
-    /* Firewall */
-    nLen := IPAddr2Num(aServer["REMOTE_ADDR"])
-    HB_HHasKey(oServer:aFirewallFilter, nLen, @nErr)
-    IF nErr > 0 .AND. nLen <= HB_HValueAt(oServer:aFirewallFilter, nErr)
-      oServer:Dbg( "Firewall denied", aServer["REMOTE_ADDR"] )
-      hb_socketShutdown(hSocket)
-      hb_socketClose(hSocket)
-      LOOP
-    ENDIF
-
-#ifndef NO_SSL
-    IF oServer:aConfig["SSL"]
-      hSSL := SSL_NEW(oServer:hSSLCtx)
-      SSL_SET_MODE(hSSL, hb_bitOr(SSL_GET_MODE(hSSL), HB_SSL_MODE_ENABLE_PARTIAL_WRITE))
-      hb_socketSetBlockingIO(hSocket, .F.)
-      SSL_SET_FD(hSSL, hb_socketGetFD(hSocket))
-
-      nTime := hb_milliseconds()
-      DO WHILE .T.
-        IF (nErr := MY_SSL_ACCEPT(hSSL, hSocket, 1000)) == 0
-          EXIT
-        ELSE
-          IF nErr == HB_SOCKET_ERR_TIMEOUT
-            //IF (hb_milliseconds() - nTime) > 1000 * 30 .OR. oServer:lStop
-            //IF (hb_milliseconds() - nTime) > 1000 * SESSION_TIMEOUT .OR. oServer:lStop
-            IF (hb_milliseconds() - nTime) > ( 1000 * oServer:nTime_Keep_Alive ) .OR. oServer:lStop
-              oServer:Dbg( "SSL accept timeout", hSocket )
-              EXIT
-            ENDIF
-          ELSE
-            oServer:Dbg( "SSL accept error:", nErr, hb_socketErrorString(nErr) )
-            EXIT
-          ENDIF
-        ENDIF
-      ENDDO
-
-      IF nErr != 0
-        oServer:Dbg( "Close connection.. => " + hb_NumToHex( hSocket ) )
-		
-		DbCloseAll()	//	CAF				
-		
-        hb_socketShutdown(hSocket)
-        hb_socketClose(hSocket)
-        LOOP
+      aServer := { => }
+      aServer[ "HTTPS" ] := oServer:aConfig[ "SSL" ]
+      IF ! Empty( aI := hb_socketGetPeerName( hSocket ) )
+         aServer[ "REMOTE_ADDR" ] := aI[ 2 ]
+         aServer[ "REMOTE_HOST" ] := aServer[ "REMOTE_ADDR" ]  // no reverse DNS
+         aServer[ "REMOTE_PORT" ] := aI[ 3 ]
+      ENDIF
+      IF ! Empty( aI := hb_socketGetSockName( hSocket ) )
+         aServer[ "SERVER_ADDR" ] := aI[ 2 ]
+         aServer[ "SERVER_PORT" ] := aI[ 3 ]
       ENDIF
 
-      aServer["SSL_CIPHER"] 			:= SSL_GET_CIPHER(hSSL)
-      aServer["SSL_PROTOCOL"] 			:= SSL_GET_VERSION(hSSL)
-      aServer["SSL_CIPHER_USEKEYSIZE"] := SSL_GET_CIPHER_BITS(hSSL, @nErr)
-      aServer["SSL_CIPHER_ALGKEYSIZE"] := nErr
-      aServer["SSL_VERSION_LIBRARY"] 	:= SSLEAY_VERSION(HB_SSLEAY_VERSION )
-      aServer["SSL_SERVER_I_DN"] 		:= X509_NAME_ONELINE(X509_GET_ISSUER_NAME(SSL_GET_CERTIFICATE(hSSL)))
-      aServer["SSL_SERVER_S_DN"] 		:= X509_NAME_ONELINE(X509_GET_SUBJECT_NAME(SSL_GET_CERTIFICATE(hSSL)))
-    ENDIF
-#endif
 
-    /* loop for processing connection */
 
-    /* Set cRequest to empty string here. This enables request pipelining */
-    cRequest := ""
-    DO WHILE ! oServer:lStop
-
-      /* receive query header */
-      nLen := 1
-      nTime := hb_milliseconds()
-      cBuf := SPACE(4096)
-      DO WHILE AT(CR_LF + CR_LF, cRequest) == 0
-#ifndef NO_SSL
-        IF oServer:aConfig["SSL"]
-          nLen := MY_SSL_READ(hSSL, hSocket, @cBuf, 1000, @nErr)
-        ELSE
-#endif
-          nLen := hb_socketRecv(hSocket, @cBuf,,, 1000)
-          IF nLen < 0
-            nErr := hb_socketGetError()
-          ENDIF
-#ifndef NO_SSL
-        ENDIF
-#endif
-        IF nLen > 0
-          cRequest += LEFT(cBuf, nLen)
-        ELSEIF nLen == 0
-          /* connection closed */
-          EXIT
-        ELSE
-          /* nLen == -1  socket error */
-          IF nErr == HB_SOCKET_ERR_TIMEOUT            
-		  
-            IF (hb_milliseconds() - nTime) > ( 1000 * oServer:nTime_Keep_Alive ) .OR. oServer:lStop
-              oServer:Dbg( "Receive timeout => " + hb_NumToHex( hSocket ) )
-              EXIT
-            ENDIF
-          ELSE
-            oServer:Dbg( "Receive error: " + ltrim(str(nErr)) + ' ' + hb_socketErrorString(nErr) )
-            EXIT
-          ENDIF
-        ENDIF
-      ENDDO
-
-      IF nLen <= 0 .OR. oServer:lStop
-        EXIT
+      /* Firewall */
+      nLen := IPAddr2Num( aServer[ "REMOTE_ADDR" ] )
+      hb_HHasKey( oServer:aFirewallFilter, nLen, @nErr )
+      IF nErr > 0 .AND. nLen <= hb_HValueAt( oServer:aFirewallFilter, nErr )
+         oServer:Dbg( "Firewall denied", aServer[ "REMOTE_ADDR" ] )
+         hb_socketShutdown( hSocket )
+         hb_socketClose( hSocket )
+         LOOP
       ENDIF
 
-      // PRIVATE
-      server := HB_HCLONE(aServer)
-      get := {=>}
-      post := {=>}
-      files := {}
-      cookie := {=>}	 
-      session := NIL	
-      s_cResult := ''
-      s_aHeader := {}
-      s_nStatusCode := 200
-//      s_aSessionData := NIL		//	Necesary ?      
-	  
-      nReqLen := ParseRequestHeader(@cRequest)
-	  
-      IF nReqLen == NIL
-        USetStatusCode(400)
-        UAddHeader("Connection", "close")
-      ELSE
-
-        /* receive query body */
-
-		//	Search Route
-		
-			cMount		:= server["SCRIPT_NAME"]	
-			aMount 		:= oServer:aConfig["Mount"]
-			nRoutes		:= len( aMount )
-			aRoute 		:= {}	
-			lPassMethod := .T.			
-
-			IF cMount == '/api'
-	
-				lPassMethod := .t.
-				Aadd( aRoute, { 'route' => '/api', 'config' => aMount[ '/api' ], 'match' => {} } )			
-				
-			else
-			
-				FOR n :=  1 to nRoutes
-				
-					aPair := HB_HPairAt( aMount, n )												
-					
-					if ( aPair[2][ 'regexp' ] != NIL ) 
-
-
-						if left( cMount, 1 ) == '/' .and. len(cMount) > 1 
-							cMount := Substr( cMount, 2 )
-						endif
-
-
-						aMatch := HB_Regex( aPair[2][ 'regexp' ], cMount )
-
-						if !empty( aMatch )   
-
-							//	Check Method						
-				
-								cMethod 	:= aPair[2][ 'method' ]
-								aMethods 	:= hb_Atokens( cMethod, ',' )													
-		
-							if AScan( aMethods, {| x | upper( x ) ==  server["REQUEST_METHOD"]} ) > 0
-								lPassMethod := .t.
-								Aadd( aRoute, { 'route' => aPair[1], 'config' => aPair[2], 'match' => aMatch } )									
-							endif
-							
-						endif
-						
-					endif
-				
-				NEXT 
-			
-			ENDIF
-
-		//	Validate Route													
-
-			IF len( aRoute ) == 1   		//	Perfect. match Route
-				//_d( 'Perfect. We execute: ' + aRoute[1]['route'] )
-			ELSEIF len(aRoute) > 1 			//	More than 1 casuistic. 
-				//	At the moment in this case, we can select First coincidence	and show warning for dbg			
-				_t( 'Warning! More than 1 route' )
-				for n = 1 to len( aRoute )
-					_t( '  >> ' + aRoute[n][ 'route'] )
-				next
-				_t( '--------------------------' )				
-			ELSE 
-				//_d( 'Ni idea...' )
-			ENDIF
-		
-        nLen := 1
-        nTime := hb_milliseconds()
-        cBuf := SPACE(4096)				
-	
-        DO WHILE LEN(cRequest) < nReqLen
 #ifndef NO_SSL
-          IF oServer:aConfig["SSL"]
-            nLen := MY_SSL_READ(hSSL, hSocket, @cBuf, 1000, @nErr)
-          ELSE
+      IF oServer:aConfig[ "SSL" ]
+         hSSL := SSL_NEW( oServer:hSSLCtx )
+         SSL_SET_MODE( hSSL, hb_bitOr( SSL_GET_MODE( hSSL ), HB_SSL_MODE_ENABLE_PARTIAL_WRITE ) )
+         hb_socketSetBlockingIO( hSocket, .F. )
+         SSL_SET_FD( hSSL, hb_socketGetFD( hSocket ) )
+
+         nTime := hb_MilliSeconds()
+         DO WHILE .T.
+            IF ( nErr := MY_SSL_ACCEPT( hSSL, hSocket, 1000 ) ) == 0
+               EXIT
+            ELSE
+               IF nErr == HB_SOCKET_ERR_TIMEOUT
+                  // IF (hb_milliseconds() - nTime) > 1000 * 30 .OR. oServer:lStop
+                  // IF (hb_milliseconds() - nTime) > 1000 * SESSION_TIMEOUT .OR. oServer:lStop
+                  IF ( hb_MilliSeconds() - nTime ) > ( 1000 * oServer:nTime_Keep_Alive ) .OR. oServer:lStop
+                     oServer:Dbg( "SSL accept timeout", hSocket )
+                     EXIT
+                  ENDIF
+               ELSE
+                  oServer:Dbg( "SSL accept error:", nErr, hb_socketErrorString( nErr ) )
+                  EXIT
+               ENDIF
+            ENDIF
+         ENDDO
+
+         IF nErr != 0
+            oServer:Dbg( "Close connection.. => " + hb_NumToHex( hSocket ) )
+
+            dbCloseAll() // CAF
+
+            hb_socketShutdown( hSocket )
+            hb_socketClose( hSocket )
+            LOOP
+         ENDIF
+
+         aServer[ "SSL_CIPHER" ]    := SSL_GET_CIPHER( hSSL )
+         aServer[ "SSL_PROTOCOL" ]    := SSL_GET_VERSION( hSSL )
+         aServer[ "SSL_CIPHER_USEKEYSIZE" ] := SSL_GET_CIPHER_BITS( hSSL, @nErr )
+         aServer[ "SSL_CIPHER_ALGKEYSIZE" ] := nErr
+         aServer[ "SSL_VERSION_LIBRARY" ]  := SSLEAY_VERSION( HB_SSLEAY_VERSION )
+         aServer[ "SSL_SERVER_I_DN" ]   := X509_NAME_ONELINE( X509_GET_ISSUER_NAME( SSL_GET_CERTIFICATE( hSSL ) ) )
+         aServer[ "SSL_SERVER_S_DN" ]   := X509_NAME_ONELINE( X509_GET_SUBJECT_NAME( SSL_GET_CERTIFICATE( hSSL ) ) )
+      ENDIF
 #endif
-            nLen := hb_socketRecv(hSocket, @cBuf,,, 1000)
+
+      /* loop for processing connection */
+
+      /* Set cRequest to empty string here. This enables request pipelining */
+      cRequest := ""
+      DO WHILE ! oServer:lStop
+
+         /* receive query header */
+         nLen := 1
+         nTime := hb_MilliSeconds()
+         cBuf := Space( 4096 )
+         DO WHILE At( CR_LF + CR_LF, cRequest ) == 0
+#ifndef NO_SSL
+            IF oServer:aConfig[ "SSL" ]
+               nLen := MY_SSL_READ( hSSL, hSocket, @cBuf, 1000, @nErr )
+            ELSE
+#endif
+               nLen := hb_socketRecv( hSocket, @cBuf,,, 1000 )
+               IF nLen < 0
+                  nErr := hb_socketGetError()
+               ENDIF
+#ifndef NO_SSL
+            ENDIF
+#endif
+            IF nLen > 0
+               cRequest += Left( cBuf, nLen )
+            ELSEIF nLen == 0
+               /* connection closed */
+               EXIT
+            ELSE
+               /* nLen == -1  socket error */
+               IF nErr == HB_SOCKET_ERR_TIMEOUT
+
+                  IF ( hb_MilliSeconds() - nTime ) > ( 1000 * oServer:nTime_Keep_Alive ) .OR. oServer:lStop
+                     oServer:Dbg( "Receive timeout => " + hb_NumToHex( hSocket ) )
+                     EXIT
+                  ENDIF
+               ELSE
+                  oServer:Dbg( "Receive error: " + LTrim( Str( nErr ) ) + ' ' + hb_socketErrorString( nErr ) )
+                  EXIT
+               ENDIF
+            ENDIF
+         ENDDO
+
+         IF nLen <= 0 .OR. oServer:lStop
+            EXIT
+         ENDIF
+
+         // PRIVATE
+         server := hb_HClone( aServer )
+         GET := { => }
+         post := { => }
+         files := {}
+         cookie := { => }
+         session := NIL
+         s_cResult := ''
+         s_aHeader := {}
+         s_nStatusCode := 200
+// s_aSessionData := NIL  // Necesary ?
+
+         nReqLen := ParseRequestHeader( @cRequest )
+
+         IF nReqLen == NIL
+            USetStatusCode( 400 )
+            UAddHeader( "Connection", "close" )
+         ELSE
+
+            /* receive query body */
+
+// Search Route
+
+            cMount  := server[ "SCRIPT_NAME" ]
+            aMount   := oServer:aConfig[ "Mount" ]
+            nRoutes  := Len( aMount )
+            aRoute   := {}
+            lPassMethod := .T.
+
+            IF cMount == '/api'
+
+               lPassMethod := .T.
+               AAdd( aRoute, { 'route' => '/api', 'config' => aMount[ '/api' ], 'match' => {} } )
+
+            ELSE
+
+               FOR n :=  1 TO nRoutes
+
+                  aPair := hb_HPairAt( aMount, n )
+
+                  IF ( aPair[ 2 ][ 'regexp' ] != NIL )
+
+
+                     IF Left( cMount, 1 ) == '/' .AND. Len( cMount ) > 1
+                        cMount := SubStr( cMount, 2 )
+                     ENDIF
+
+
+                     aMatch := hb_regex( aPair[ 2 ][ 'regexp' ], cMount )
+
+                     IF !Empty( aMatch )
+
+// Check Method
+
+                        cMethod  := aPair[ 2 ][ 'method' ]
+                        aMethods  := hb_ATokens( cMethod, ',' )
+
+                        IF AScan( aMethods, {| x | Upper( x ) ==  server[ "REQUEST_METHOD" ] } ) > 0
+                           lPassMethod := .T.
+                           AAdd( aRoute, { 'route' => aPair[ 1 ], 'config' => aPair[ 2 ], 'match' => aMatch } )
+                        ENDIF
+
+                     ENDIF
+
+                  ENDIF
+
+               NEXT
+
+            ENDIF
+
+// Validate Route
+
+            IF Len( aRoute ) == 1     // Perfect. match Route
+// _d( 'Perfect. We execute: ' + aRoute[1]['route'] )
+            ELSEIF Len( aRoute ) > 1    // More than 1 casuistic.
+// At the moment in this case, we can select First coincidence and show warning for dbg
+               _t( 'Warning! More than 1 route' )
+               FOR n = 1 TO Len( aRoute )
+                  _t( '  >> ' + aRoute[ n ][ 'route' ] )
+               NEXT
+               _t( '--------------------------' )
+            ELSE
+// _d( 'Ni idea...' )
+            ENDIF
+
+            nLen := 1
+            nTime := hb_MilliSeconds()
+            cBuf := Space( 4096 )
+
+            DO WHILE Len( cRequest ) < nReqLen
+#ifndef NO_SSL
+               IF oServer:aConfig[ "SSL" ]
+                  nLen := MY_SSL_READ( hSSL, hSocket, @cBuf, 1000, @nErr )
+               ELSE
+#endif
+                  nLen := hb_socketRecv( hSocket, @cBuf,,, 1000 )
+                  IF nLen < 0
+                     nErr := hb_socketGetError()
+                  ENDIF
+#ifndef NO_SSL
+               ENDIF
+#endif
+               IF nLen > 0
+                  cRequest += Left( cBuf, nLen )
+               ELSEIF nLen == 0
+                  /* connection closed */
+                  EXIT
+               ELSE
+                  /* nLen == -1  socket error */
+                  IF nErr == HB_SOCKET_ERR_TIMEOUT
+                     IF ( hb_MilliSeconds() - nTime ) > 1000 * 120 .OR. oServer:lStop
+                        oServer:Dbg( "Receive timeout => " + hb_NumToHex( hSocket ) )
+                        EXIT
+                     ENDIF
+                  ELSE
+                     oServer:Dbg( "Receive error: " + LTrim( Str( nErr ) ) + ' ' + hb_socketErrorString( nErr ) )
+                     EXIT
+                  ENDIF
+               ENDIF
+            ENDDO
+
+            IF nLen <= 0 .OR. oServer:lStop
+               EXIT
+            ENDIF
+
+            // ? cRequest
+            ParseRequestBody( Left( cRequest, nReqLen ), oServer )
+            cRequest := SubStr( cRequest, nReqLen + 1 )
+
+            /* Deal with supported protocols and methods */
+            IF !( Left( server[ "SERVER_PROTOCOL" ], 5 ) == "HTTP/" )
+               USetStatusCode( 400 ) /* Bad request */
+               UAddHeader( "Connection", "close" )
+            ELSEIF !( SubStr( server[ "SERVER_PROTOCOL" ], 6 ) $ "1.0 1.1" )
+               USetStatusCode( 505 ) /* HTTP version not supported */
+// ELSEIF !(server["REQUEST_METHOD"] $ "GET POST")    // Check for Lautaro. Check method ! only GET POST
+            ELSEIF ! lPassMethod
+               USetStatusCode( 404 ) /* Not implemented */
+            ELSE
+               IF server[ "SERVER_PROTOCOL" ] == "HTTP/1.1"
+                  IF Lower( server[ "HTTP_CONNECTION" ] ) == "close"
+                     UAddHeader( "Connection", "close" )
+                  ELSE
+                     UAddHeader( "Connection", "keep-alive" )
+                  ENDIF
+               ENDIF
+
+               /* Do the job */
+
+               ProcessRequest( oServer, aRoute )
+
+            ENDIF
+         ENDIF /* request header ok */
+
+         // Send response
+         cBuf := MakeResponse()
+
+         DO WHILE Len( cBuf ) > 0 .AND. ! oServer:lStop
+#ifndef NO_SSL
+            IF oServer:aConfig[ "SSL" ]
+               nLen := MY_SSL_WRITE( hSSL, hSocket, cBuf, 1000, @nErr )
+            ELSE
+#endif
+               nLen := hb_socketSend( hSocket, cBuf,,, 1000 )
+               IF nLen < 0
+                  nErr := hb_socketGetError()
+               ENDIF
+#ifndef NO_SSL
+            ENDIF
+#endif
             IF nLen < 0
-              nErr := hb_socketGetError()
+               oServer:Dbg( "send error:", nErr, hb_socketErrorString( nErr ) )
+               EXIT
+            ELSEIF nLen > 0
+               cBuf := SubStr( cBuf, nLen + 1 )
             ENDIF
-#ifndef NO_SSL
-          ENDIF
-#endif
-          IF nLen > 0
-            cRequest += LEFT(cBuf, nLen)
-          ELSEIF nLen == 0
-            /* connection closed */
+         ENDDO
+
+         IF oServer:lStop
             EXIT
-          ELSE
-            /* nLen == -1  socket error */
-            IF nErr == HB_SOCKET_ERR_TIMEOUT
-              IF (hb_milliseconds() - nTime) > 1000 * 120 .OR. oServer:lStop
-                oServer:Dbg( "Receive timeout => " + hb_NumToHex( hSocket ))
-                EXIT
-              ENDIF
-            ELSE
-              oServer:Dbg( "Receive error: " + ltrim(str(nErr)) + ' ' + hb_socketErrorString(nErr) )
-              EXIT
-            ENDIF
-          ENDIF
-        ENDDO
+         ENDIF
 
-        IF nLen <= 0 .OR. oServer:lStop
-          EXIT
-        ENDIF
+         oServer:LogAccess()
 
-        //? cRequest
-        ParseRequestBody(LEFT(cRequest, nReqLen), oServer )
-        cRequest := SUBSTR(cRequest, nReqLen + 1)			
-
-        /* Deal with supported protocols and methods */
-        IF ! (LEFT(server["SERVER_PROTOCOL"], 5) == "HTTP/")
-          USetStatusCode(400) /* Bad request */
-          UAddHeader("Connection", "close")
-        ELSEIF ! (SUBSTR(server["SERVER_PROTOCOL"], 6) $ "1.0 1.1")
-          USetStatusCode(505) /* HTTP version not supported */
-//      ELSEIF !(server["REQUEST_METHOD"] $ "GET POST")				// Check for Lautaro. Check method ! only GET POST 
-      ELSEIF ! lPassMethod																					
-			USetStatusCode(404) /* Not implemented */		  		  
-        ELSE
-          IF server["SERVER_PROTOCOL"] == "HTTP/1.1"
-            IF LOWER(server["HTTP_CONNECTION"]) == "close"
-              UAddHeader("Connection", "close")
-            ELSE
-              UAddHeader("Connection", "keep-alive")
-            ENDIF
-          ENDIF
-
-          /* Do the job */	
-  
-          ProcessRequest(oServer, aRoute )
-
-        ENDIF
-      ENDIF /* request header ok */
-
-      // Send response
-      cBuf := MakeResponse()
-
-      DO WHILE LEN(cBuf) > 0 .AND. ! oServer:lStop
-#ifndef NO_SSL
-        IF oServer:aConfig["SSL"]
-          nLen := MY_SSL_WRITE(hSSL, hSocket, cBuf, 1000, @nErr)
-        ELSE
-#endif
-          nLen := hb_socketSend(hSocket, cBuf,,, 1000)
-          IF nLen < 0
-            nErr := hb_socketGetError()
-          ENDIF
-#ifndef NO_SSL
-        ENDIF
-#endif
-        IF nLen < 0
-          oServer:Dbg( "send error:", nErr, hb_socketErrorString(nErr) )
-          EXIT
-        ELSEIF nLen > 0
-          cBuf := SUBSTR(cBuf, nLen + 1)
-        ENDIF
+         IF HB_ISSTRING( UGetHeader( "Connection" ) ) .AND. Lower( UGetHeader( "Connection" ) ) == "close" .OR. server[ "SERVER_PROTOCOL" ] == "HTTP/1.0"
+            EXIT
+         ENDIF
       ENDDO
 
-      IF oServer:lStop
-        EXIT
-      ENDIF
-
-      oServer:LogAccess()
-
-      IF HB_IsString( UGetHeader("Connection") ) .and. LOWER(UGetHeader("Connection")) == "close" .OR. server["SERVER_PROTOCOL"] == "HTTP/1.0"
-        EXIT
-      ENDIF
-    ENDDO
-
 #ifndef NO_SSL
-    hSSL := NIL
+      hSSL := NIL
 #endif
-    oServer:Dbg( "Close connection. => " + hb_NumToHex( hSocket )  )
-    hb_socketShutdown(hSocket)
-    hb_socketClose(hSocket)
-					
-	DbCloseAll()	//	CAF		
-	
-  ENDDO
-RETURN 0
+      oServer:Dbg( "Close connection. => " + hb_NumToHex( hSocket )  )
+      hb_socketShutdown( hSocket )
+      hb_socketClose( hSocket )
+
+      dbCloseAll() // CAF
+
+   ENDDO
+
+   RETURN 0
 
 FUNCTION USetFilePrg( cFile )
-	cFilePrg := cFile
-RETU NIL
+
+   cFilePrg := cFile
+   RETU NIL
 
 FUNCTION UGetFilePrg(); RETU cFilePrg
+
 FUNCTION UGetFileHtml(); RETU cFileHtml
 
 STATIC FUNCTION ProcessRequest( oServer, aRoute )
-LOCAL nI, aMount, cMount, cPath, bEval, xRet, nT := HB_MILLISECONDS()
-local h := {=>}
-local aMethods
-local cError := '',  cDbg
-local nIni, oError, n, aParams
-local cInfoCode := ''
-local lIsRoute := .t.
-local hMtr 		:= {=>}
 
-//local oUDom
-//* Error vars
+   LOCAL nI, aMount, cMount, cPath, bEval, xRet, nT := hb_MilliSeconds()
+   LOCAL h := { => }
+   LOCAL aMethods
+   LOCAL cError := '',  cDbg
+   LOCAL nIni, oError, n, aParams
+   LOCAL cInfoCode := ''
+   LOCAL lIsRoute := .T.
+   LOCAL hMtr   := { => }
 
-
-	oError := NIL
-	
-  // Search mounting table
-  aMount := oServer:aConfig["Mount"]
+// local oUDom
+// * Error vars
 
 
-	if len( aRoute ) > 0	
-		cPath  := ''
-		cMount := aRoute[1][ 'route' ]
+   oError := NIL
 
-	else 
-
-		cMount := server["SCRIPT_NAME"]
+   // Search mounting table
+   aMount := oServer:aConfig[ "Mount" ]
 
 
-		nI := LEN(cMount)
-		DO WHILE (nI := HB_RAT("/", cMount,, nI)) > 0
-		  IF HB_HHasKey(aMount, LEFT(cMount, nI) + "*")
-			//? "HAS", LEFT(cMount, nI) + "*"
-			cMount := LEFT(cMount, nI) + "*"
-			cPath := SUBSTR(server["SCRIPT_NAME"], nI + 1)
-			EXIT
-		  ENDIF
-		  IF --nI == 0
-			EXIT
-		  ENDIF
-		ENDDO
-		
-	endif
-	
+   IF Len( aRoute ) > 0
+      cPath  := ''
+      cMount := aRoute[ 1 ][ 'route' ]
 
-  IF cPath != NIL .or. server["REQUEST_METHOD"] == 'OPTIONS' 
-  
-	server['route'] := cMount
+   ELSE
 
-	h[ 'path' ] 		:= cPath					//	Request file like .../proto.dos/files/favicon.ico
-	h[ 'pathhtml' ]	 	:= oServer:cPathHtml		//	Root path where will be html files
-	h[ 'pathlog' ] 		:= oServer:cPathLog
-	h[ 'debug' ] 		:= oServer:lDebug	
-	h[ 'server' ] 		:= server					//	Environment files server
-	h[ 'get' ] 			:= get						//	
-	h[ 'post' ] 		:= post						//	
-	h[ 'files' ] 		:= files
-	h[ 'route' ] 		:= if( len(aRoute) > 0 , aRoute[1], {} )
-	
-
-	//	Parameters if you used friendly url
-
-		if len( aRoute ) > 0 .and. valtype( h[ 'get' ] ) == 'H'		//	Sure!
-		
-			aParams := aRoute[1][ 'match' ]
-		
-			for n := 2 to len( aParams )
-			
-				h[ 'get' ][ '_value' + ltrim(str(n-1)) ] := aParams[n]
-			
-			next 
-		
-		endif 
-
-	//	----------------------------------------
-	
-	if valtype( aMount[cMount] ) == 'B'
-	
-		bEval := aMount[cMount]
-		
-	elseif valtype( aMount[cMount] ) == 'H'	
-
-		if HB_HHasKey( aMount[cMount], 'action' )
-	
-	
-			bEval := aMount[cMount][ 'action' ]
-			
-		endif
-		
-		if HB_HHasKey( aMount[cMount], 'method' )
-
-			aMethods := hb_Atokens( aMount[cMount][ 'method'] , ',' )		
-	
-		
-			if server["REQUEST_METHOD"] != 'OPTIONS' .and. AScan( aMethods, {| x | upper( x ) ==  server["REQUEST_METHOD"]} ) == 0
-			
-				if UIsAjax()
-
-					UAddHeader("Content-Type", "application/json")
-					
-					xRet := {=>}
-					xRet[ 'success' ] := .f.
-					xRet[ 'html' ] := ''
-					xRet[ 'msg' ] := 'Error route...' +  cMount + ', dont declarated method ' + server["REQUEST_METHOD"]
-					
-					
-					UWrite( hb_jsonEncode( xRet ) )
-					
-				else								
-					USetStatusCode( 404 )					
-					_t( '>> Error route: ' +  cMount + ', dont declarated method ' + server["REQUEST_METHOD"] )
-				endif
-
-				retu ''
-			endif			
-		
-		endif 			
-		
-	endif
+      cMount := server[ "SCRIPT_NAME" ]
 
 
-	nIni := hb_milliseconds()		// CAF
+      nI := Len( cMount )
+      DO WHILE ( nI := hb_RAt( "/", cMount,, nI ) ) > 0
+         IF hb_HHasKey( aMount, Left( cMount, nI ) + "*" )
+// ? "HAS", LEFT(cMount, nI) + "*"
+            cMount := Left( cMount, nI ) + "*"
+            cPath := SubStr( server[ "SCRIPT_NAME" ], nI + 1 )
+            EXIT
+         ENDIF
+         IF --nI == 0
+            EXIT
+         ENDIF
+      ENDDO
 
-    //BEGIN SEQUENCE WITH {|oErr| UErrorHandler( oErr, oServer, @cError )}
-    BEGIN SEQUENCE WITH {|oErr| oError := oErr, Break( oErr ) }
-    
-	  
+   ENDIF
 
-		/* Hem d'explorar aquesta opció de pasar primer el oDoms
-		   Ho vaig porbar però no xutava bé. Això és el que fem 
-		   a UWebApi
-		   
-			oUDom := UDom():New( h[ 'post' ], h[ 'files' ] )
-			xRet := EVAL(bEval, oUDom, h )
-		*/
-		
-	    xRet := EVAL(bEval, h )
-		
-		//	If exist session, we can save data values...	
 
-			//	Charly -> Pendiente de chequear por que a veces
-			//	se evalua UWebApi y realiza el USessionWrite() y despues le USessionDelte().
-			//	y viene aqui y lo vuelve a ejecutar. no pasa nada
-			//  porque como oSession == NIL ni escribe ni nada.
-			//	Pero pendiente de revisar
-				
-				USessionWrite()	
-				UsessionDelete()
-			
-			//	-------------------------------------------------
-			
-		
+   IF cPath != NIL .OR. server[ "REQUEST_METHOD" ] == 'OPTIONS'
 
-      IF VALTYPE(xRet) == "C"
+      server[ 'route' ] := cMount
 
-        UWrite(xRet)		
+      h[ 'path' ]   := cPath     // Request file like .../proto.dos/files/favicon.ico
+      h[ 'pathhtml' ]   := oServer:cPathHtml  // Root path where will be html files
+      h[ 'pathlog' ]   := oServer:cPathLog
+      h[ 'debug' ]   := oServer:lDebug
+      h[ 'server' ]   := server     // Environment files server
+      h[ 'get' ]    := GET      //
+      h[ 'post' ]   := post      //
+      h[ 'files' ]   := files
+      h[ 'route' ]   := if( Len( aRoute ) > 0, aRoute[ 1 ], {} )
 
-      ELSEIF VALTYPE(xRet) == "H"
-        
-		if UIsAjax()
 
-			UAddHeader("Content-Type", "application/json")
-			
-			UWrite( hb_jsonEncode( xRet ) )
-			
-		else		
+// Parameters if you used friendly url
 
-			if xRet[ 'success' ]									
-				UWrite( xRet[ 'html' ] )
-			else 									
-				//UWrite( UMsgError(  xRet[ 'msg' ] ) )
-				UDo_ErrorMsg( xRet[ 'msg' ] )
-			endif
-			
-		endif
-			
-		
-		
-		//	Hauriem de mir de fer un hb_jsondecode(xRet) 
-		//	Despres ... no de som agafar-ho
+      IF Len( aRoute ) > 0 .AND. ValType( h[ 'get' ] ) == 'H'  // Sure!
+
+         aParams := aRoute[ 1 ][ 'match' ]
+
+         FOR n := 2 TO Len( aParams )
+
+            h[ 'get' ][ '_value' + LTrim( Str( n - 1 ) ) ] := aParams[ n ]
+
+         NEXT
+
       ENDIF
-	  
-	  //	Quizas tendriamos de meter el cierre de session en 
-	  //	este punto...
-	  
 
-    //RECOVER 
-    RECOVER USING oError
+// ----------------------------------------
 
-		cInfoCode 	:= UGetInfoCode( oError )
-		
-		cError 		+= UErrorWeb()			
+      IF ValType( aMount[ cMount ] ) == 'B'
 
-		cError 		+= UErrorGetDescription( oError, cInfoCode )									
-		
-		cError 		+= UErrorGetSys()						
+         bEval := aMount[ cMount ]
 
-		if UIsAjax()		
-			UWrite( cError )
-		else			
-			UWrite( UMsgError( cError ) )
-		endif
-		
-		retu ''
+      ELSEIF ValType( aMount[ cMount ] ) == 'H'
 
-	  
-    END SEQUENCE
-	
-    //oServer:Dbg( 'Lap. ' + ltrim(str(hb_milliseconds()-nIni )) + 'ms.' ) 	//CAF	
+         IF hb_HHasKey( aMount[ cMount ], 'action' )
 
-	if oServer:lDbfAutoClose	// CAF
-		//oServer:Dbg( 'DbCloseAll(1)' )
-		DBCLOSEALL()		
-	endif
 
-    // Unlock session					//	Necesary?
-	/*
+            bEval := aMount[ cMount ][ 'action' ]
+
+         ENDIF
+
+         IF hb_HHasKey( aMount[ cMount ], 'method' )
+
+            aMethods := hb_ATokens( aMount[ cMount ][ 'method' ], ',' )
+
+
+            IF server[ "REQUEST_METHOD" ] != 'OPTIONS' .AND. AScan( aMethods, {| x | Upper( x ) ==  server[ "REQUEST_METHOD" ] } ) == 0
+
+               IF UIsAjax()
+
+                  UAddHeader( "Content-Type", "application/json" )
+
+                  xRet := { => }
+                  xRet[ 'success' ] := .F.
+                  xRet[ 'html' ] := ''
+                  xRet[ 'msg' ] := 'Error route...' +  cMount + ', dont declarated method ' + server[ "REQUEST_METHOD" ]
+
+
+                  UWrite( hb_jsonEncode( xRet ) )
+
+               ELSE
+                  USetStatusCode( 404 )
+                  _t( '>> Error route: ' +  cMount + ', dont declarated method ' + server[ "REQUEST_METHOD" ] )
+               ENDIF
+
+               RETU ''
+            ENDIF
+
+         ENDIF
+
+      ENDIF
+
+
+      nIni := hb_MilliSeconds()  // CAF
+
+      // BEGIN SEQUENCE WITH {|oErr| UErrorHandler( oErr, oServer, @cError )}
+      BEGIN SEQUENCE WITH {| oErr | oError := oErr, Break( oErr ) }
+
+
+
+  /* Hem d'explorar aquesta opció de pasar primer el oDoms
+     Ho vaig porbar però no xutava bé. Això és el que fem
+     a UWebApi
+
+   oUDom := UDom():New( h[ 'post' ], h[ 'files' ] )
+   xRet := EVAL(bEval, oUDom, h )
+  */
+
+         xRet := Eval( bEval, h )
+
+// If exist session, we can save data values...
+
+// Charly -> Pendiente de chequear por que a veces
+// se evalua UWebApi y realiza el USessionWrite() y despues le USessionDelte().
+// y viene aqui y lo vuelve a ejecutar. no pasa nada
+// porque como oSession == NIL ni escribe ni nada.
+// Pero pendiente de revisar
+
+         USessionWrite()
+         UsessionDelete()
+
+// -------------------------------------------------
+
+
+
+         IF ValType( xRet ) == "C"
+
+            UWrite( xRet )
+
+         ELSEIF ValType( xRet ) == "H"
+
+            IF UIsAjax()
+
+               UAddHeader( "Content-Type", "application/json" )
+
+               UWrite( hb_jsonEncode( xRet ) )
+
+            ELSE
+
+               IF xRet[ 'success' ]
+                  UWrite( xRet[ 'html' ] )
+               ELSE
+// UWrite( UMsgError(  xRet[ 'msg' ] ) )
+                  UDo_ErrorMsg( xRet[ 'msg' ] )
+               ENDIF
+
+            ENDIF
+
+
+
+// Hauriem de mir de fer un hb_jsondecode(xRet)
+// Despres ... no de som agafar-ho
+         ENDIF
+
+// Quizas tendriamos de meter el cierre de session en
+// este punto...
+
+
+         // RECOVER
+      RECOVER USING oError
+
+         cInfoCode  := UGetInfoCode( oError )
+
+         cError   += UErrorWeb()
+
+         cError   += UErrorGetDescription( oError, cInfoCode )
+
+         cError   += UErrorGetSys()
+
+         IF UIsAjax()
+            UWrite( cError )
+         ELSE
+            UWrite( UMsgError( cError ) )
+         ENDIF
+
+         RETU ''
+
+
+      END SEQUENCE
+
+      // oServer:Dbg( 'Lap. ' + ltrim(str(hb_milliseconds()-nIni )) + 'ms.' )  //CAF
+
+      IF oServer:lDbfAutoClose // CAF
+// oServer:Dbg( 'DbCloseAll(1)' )
+         dbCloseAll()
+      ENDIF
+
+      // Unlock session     // Necesary?
+ /*
     IF s_aSessionData != NIL
       session := NIL
       hb_mutexUnlock(s_aSessionData[1])
       s_aSessionData := NIL
     ENDIF
-	*/
-  ELSE
-	
-	USetStatusCode(404)
-
-	
-	/*No chuta
-	if UIsAjax()
-		UWrite( "Route don't exist => " +  cMount )
-	endif
-	*/
-  ENDIF                    
-
-	cDbg := server["REMOTE_HOST"] + ':' + ltrim(str(server["REMOTE_PORT"])) 
-
-
-	//	Metrics... <<-----------------------------------	
-	
-	hMtr[ 'key' ] := ''
-	hMtr[ 'run' ] := 0
-	hMtr[ 'time' ]:= 0
-	hMtr[ 'max' ] := 0
-	hMtr[ 'min' ] := 999999
-	hMtr[ 'lapsus' ] := HB_MILLISECONDS() - nT
-	
-	hMtr[ 'metric' ]  := ''
-
-
-  if hb_HHaskey( h, 'post' ) .and. hb_HHaskey( h[ 'post' ], 'api' )  	
-	
-	cDbg += ' >> Api ' + h[ 'post' ][ 'api' ] + ' => ' + h[ 'post' ][ 'proc' ] + ' : ' + LTRIM(STR(hMtr[ 'lapsus' ])) +  "ms" 
-		
-	hMtr[ 'key' ] := h[ 'post' ][ 'api' ] + ':' + h[ 'post' ][ 'proc' ] 	
-	
-	hb_mutexLock(oServer:hmtxReq)
-	
-		if HB_HHasKey( oServer:hReq[ 'ip' ], server["REMOTE_ADDR"] )		
-			hMtr[ 'run' ] 	:=  oServer:hReq[ 'ip' ][ server["REMOTE_ADDR"]  ][ 'run' ] + 1
-			oServer:hReq[ 'ip' ][ server["REMOTE_ADDR"] ] := { 'run' => hMtr[ 'run' ], 'last' => DToC(date()) + ' ' + time() }
-		else
-			oServer:hReq[ 'ip' ][ server["REMOTE_ADDR"] ] := { 'run' => 1, 'last' => DToC(date()) + ' ' + time() } 
-		endif
-		
-		if HB_HHasKey( oServer:hReq[ 'proc' ], hMtr[ 'key' ] ) 
-		
-			hMtr[ 'run' ] 	:= oServer:hReq[ 'proc'][ hMtr[ 'key' ] ][ 'run' ] + 1
-			hMtr[ 'time' ] 	:= oServer:hReq[ 'proc'][ hMtr[ 'key' ] ][ 'time' ] + hMtr[ 'lapsus' ]
-			hMtr[ 'max' ] 	:= Max( oServer:hReq[ 'proc'][ hMtr[ 'key' ] ][ 'max' ], hMtr[ 'lapsus' ] )
-			hMtr[ 'min' ] 	:= Min( oServer:hReq[ 'proc'][ hMtr[ 'key' ] ][ 'min' ], hMtr[ 'lapsus' ] )
-		
-			oServer:hReq[ 'proc'][ hMtr[ 'key' ] ] := { 'run' => hMtr[ 'run' ], 'time' => hMtr[ 'time' ], 'min' => hMtr[ 'min' ], 'max' => hMtr[ 'max' ] } 
-		else 
-			oServer:hReq[ 'proc'][ hMtr[ 'key' ] ] := { 'run' => 1, 'time' => hMtr[ 'lapsus' ], 'min' => hMtr[ 'lapsus' ], 'max' => hMtr[ 'lapsus' ] } 
-		endif				
-	
-	hb_mutexUnlock(oServer:hmtxReq)	
-	
-	
-  ELSE			
-	
-	cDbg += ' >> ' + cMount + " : " + LTRIM(STR(hMtr[ 'lapsus' ])) + "ms" 
-	
-	if cMount != '/files/*' .and. !( cMount == '/' ) .and. lisRoute
-	
-		hb_mutexLock(oServer:hmtxReq)
-		
-			if HB_HHasKey( oServer:hReq[ 'ip' ], server["REMOTE_ADDR"] )		
-				hMtr[ 'run' ] 	:=  oServer:hReq[ 'ip' ][ server["REMOTE_ADDR"]  ][ 'run' ] + 1
-				oServer:hReq[ 'ip' ][ server["REMOTE_ADDR"] ] := { 'run' => hMtr[ 'run' ], 'last' => DToC(date()) + ' ' + time() }
-			else
-				oServer:hReq[ 'ip' ][ server["REMOTE_ADDR"] ] := { 'run' => 1, 'last' => DToC(date()) + ' ' + time() } 
-			endif
-			
-			if HB_HHasKey( oServer:hReq[ 'func' ], cMount ) 
-			
-				hMtr[ 'run' ] 	:= oServer:hReq[ 'func'][ cMount ][ 'run' ] + 1
-				hMtr[ 'time' ] 	:= oServer:hReq[ 'func'][ cMount ][ 'time' ] + hMtr[ 'lapsus' ]
-				hMtr[ 'max' ] 	:= Max( oServer:hReq[ 'func'][ cMount ][ 'max' ], hMtr[ 'lapsus' ] )
-				hMtr[ 'min' ] 	:= Min( oServer:hReq[ 'func'][ cMount ][ 'min' ], hMtr[ 'lapsus' ] )
-			
-				oServer:hReq[ 'func'][ cMount ] := { 'run' => hMtr[ 'run' ], 'time' => hMtr[ 'time' ], 'min' => hMtr[ 'min' ], 'max' => hMtr[ 'max' ] } 
-			else 
-				oServer:hReq[ 'func'][ cMount ] := { 'run' => 1, 'time' => hMtr[ 'lapsus' ], 'min' => hMtr[ 'lapsus' ], 'max' => hMtr[ 'lapsus' ] } 
-			endif				
-		
-		hb_mutexUnlock(oServer:hmtxReq)						
-		
-	endif
-	
-	oServer:Dbg( cDbg )
-	
-  endif 
- 
-  
-RETURN ''
-
-function DoMetric()
-
-
-retu nil 
-
-
-function UGetInfoCode( oError, cCode, cCodePP )
-
-	local n, nL, nLineError, nOffset, nLin, nPos, cLine
-	local aTagLine := {}
-	local aLines := {}
-	local cText := ''
-	local cInfoCode := ''
-
-	hb_default( @cCode, '' )
-	hb_default( @cCodePP, '' )
-
-	//	En el código preprocesado, buscamos tags #line (#includes,#commands,...)
-
-		aLines = hb_ATokens( cCodePP, chr(10) )
-
-		for n = 1 to Len( aLines )   
-
-			cLine := aLines[ n ] 
-		  
-			if substr( cLine, 1, 5 ) == '#line' 
-
-				nLin := Val(Substr( cLine, 6 ))				
-
-				Aadd( aTagLine, { n, (nLin-n-1) } )
-				
-				
-			endif 	  
-
-		next 
-	
-	
-	//	Buscamos si oError nos da Linea
-	
-		nL 			:= 0					
-		
-		if ! Empty( oError:operation )
-	  
-			nPos := AT(  'line:', oError:operation )
-
-			if nPos > 0 				
-				nL := Val( Substr( oError:operation, nPos + 5 ) ) 
-			endif	  	  
-		  
-		endif 
-
-
-	//	Procesamos Offset segun linea error					
-	
-		nLineError := nL
-		
-		if nL > 0					
-		
-			//	Xec vectors 	
-			//	{ nLine, nOffset }
-			//	{ 1, 5 }, { 39, 8 }
-			
-			for n := 1  to len( aTagLine ) 
-				
-				if aTagLine[n][1] < nL 
-					nOffset 	:= aTagLine[n][2]
-					nLineError	:= nL + nOffset 
-				endif		
-			
-			next 
-	
-			nLineError	-= 1	//	__Inline() + CRLF
-			
-		else 
-		
-
-			
-		endif	
-
-
-		if At(  'line:', oError:operation ) > 0
-			oError:operation := 'Line: ' + ltrim(str(nLineError))
-		endif
-		
-		if ! empty( cCode )
-			cInfoCode += UErrorGetCode( cCode, nLineError )	
-		endif
-		
-
-retu cInfoCode 
-
-FUNC UIsAjax()
-
-	local lIsAjax := .f.
-
-	if HB_HHasKey( server, 'HTTP_X_REQUESTED_WITH' )
-		lIsAjax := lower( server[ 'HTTP_X_REQUESTED_WITH' ] ) == 'xmlhttprequest'
-	endif
-
-RETU lIsAjax 
-
-function USetErrorStatus( nStatus, cPage, cAjax )
-	oServer:SetErrorStatus( nStatus, cPage, cAjax )
-retu nil
-
-
-STATIC FUNC ParseRequestHeader(cRequest)
-LOCAL aRequest, aLine, nI, nJ, cI, nK, nL, nContentLength := 0
-LOCAL aCookies 
-
-
-  nI := AT(CR_LF + CR_LF, cRequest)
-  aRequest := hb_aTokens(LEFT(cRequest, nI - 1), CR_LF)
-  cRequest := SUBSTR(cRequest, nI + 4)
-
-  aLine := hb_aTokens(aRequest[1], " ")
-
-  server["REQUEST_ALL"] := aRequest[1]
-  IF LEN(aLine) == 3 .AND. LEFT(aLine[3], 5) == "HTTP/"
-    server["REQUEST_METHOD"] := aLine[1]
-    server["REQUEST_URI"] := aLine[2]
-    server["SERVER_PROTOCOL"] := aLine[3]
-  ELSE
-    server["REQUEST_METHOD"] := aLine[1]
-    server["REQUEST_URI"] := IIF(LEN(aLine) >= 2, aLine[2], "")
-    server["SERVER_PROTOCOL"] := IIF(LEN(aLine) >= 3, aLine[3], "")
-    RETURN NIL
-  ENDIF
-
-  // Fix invalid queries: bind to root
-  IF ! (LEFT(server["REQUEST_URI"], 1) == "/")
-    server["REQUEST_URI"] := "/" + server["REQUEST_URI"]
-  ENDIF
-
-  IF (nI := AT("?", server["REQUEST_URI"])) > 0
-    server["SCRIPT_NAME"] := LEFT(server["REQUEST_URI"], nI - 1)
-    server["QUERY_STRING"] := SUBSTR(server["REQUEST_URI"], nI + 1)
-  ELSE
-    server["SCRIPT_NAME"] := server["REQUEST_URI"]
-    server["QUERY_STRING"] := ""
-  ENDIF
-
-  server["HTTP_ACCEPT"] := ""
-  server["HTTP_ACCEPT_CHARSET"] := ""
-  server["HTTP_ACCEPT_ENCODING"] := ""
-  server["HTTP_ACCEPT_LANGUAGE"] := ""
-  server["HTTP_CONNECTION"] := ""
-  server["HTTP_HOST"] := ""
-  server["HTTP_KEEP_ALIVE"] := ""
-  server["HTTP_REFERER"] := ""
-  server["HTTP_USER_AGENT"] := ""
-  
-
-  FOR nI := 2 TO LEN(aRequest)
-    IF aRequest[nI] == "";  EXIT
-    ELSEIF (nJ := AT(":", aRequest[nI])) > 0
-      cI := ALLTRIM(SUBSTR(aRequest[nI], nJ + 1))
-      SWITCH UPPER(LEFT(aRequest[nI], nJ - 1))
-        CASE "COOKIE"
-	
-          server["HTTP_COOKIE"] := cI
-		  
-		  aCookies = HB_ATOKENS( cI, ';' )
-		  
-		  for nL = 1 to len( aCookies )
-			nK := At( '=', aCookies[nL] )
-			
-			if nK > 0 			
-				cookie[ ALLTRIM(UPPER(LEFT(aCookies[nL], nK - 1))) ] := Alltrim( SUBSTR(aCookies[nL], nK + 1) )
-			endif 			
-		  next 
-
-          EXIT
-        CASE "CONTENT-LENGTH"
-          nContentLength := VAL(cI)
-          EXIT
-        CASE "CONTENT-TYPE"
-          server["CONTENT_TYPE"] := cI
-          EXIT  
-		  
-        OTHERWISE
-          server["HTTP_" + STRTRAN(UPPER(LEFT(aRequest[nI], nJ - 1)), "-", "_")] := cI	  
-          EXIT
-      ENDSWITCH
-    ENDIF
-  NEXT
-  IF !(server["QUERY_STRING"] == "")
-    FOR EACH cI IN hb_aTokens(server["QUERY_STRING"], "&")
-      IF (nI := AT("=", cI)) > 0
-        get[UUrlDecode(LEFT(cI, nI - 1))] := UUrlDecode(SUBSTR(cI, nI + 1))
-      ELSE
-        get[UUrlDecode(cI)] := NIL
-      ENDIF
-    NEXT
-  ENDIF
-  
-
-  
-  
-RETURN nContentLength
-
-
-
-STATIC FUNC ParseRequestBody(cRequest, oServer )
-	LOCAL nI, cPart
-	local cEncoding := ''
-
-  IF HB_HHasKey(server, "CONTENT_TYPE") 
-
-		IF (nI := AT("CHARSET=", UPPER(server["CONTENT_TYPE"]))) > 0
-		  cEncoding := UPPER(SUBSTR(server["CONTENT_TYPE"], nI + 8))
-		ENDIF		
-		
-		DO CASE
-  
-			CASE LEFT(server["CONTENT_TYPE"], 33) == "application/x-www-form-urlencoded"				
-
-				IF ! (cRequest == "")
-				  IF cEncoding == "UTF-8" .AND. oServer:lUtf8 == .F. 		//	Transform UTF8toStr
-					 FOR EACH cPart IN hb_aTokens(cRequest, "&")
-					   IF (nI := AT("=", cPart)) > 0
-						 post[HB_UTF8TOSTR(UUrlDecode(LEFT(cPart, nI - 1)))] := HB_UTF8TOSTR(UUrlDecode(SUBSTR(cPart, nI + 1)))
-					   ELSE
-						 post[HB_UTF8TOSTR(UUrlDecode(cPart))] := NIL
-					   ENDIF
-					 NEXT
-				  ELSE
-					 FOR EACH cPart IN hb_aTokens(cRequest, "&")
-					   IF (nI := AT("=", cPart)) > 0
-						 post[UUrlDecode(LEFT(cPart, nI - 1))] := UUrlDecode(SUBSTR(cPart, nI + 1))
-					   ELSE
-						 post[UUrlDecode(cPart)] := NIL
-					   ENDIF
-					 NEXT
-				  ENDIF
-				  
-				ENDIF
-				  
-			CASE LEFT(server["CONTENT_TYPE"], 16 ) == "application/json"	//	Workaround of Quim
-			
-				if hb_jsonDecode( cRequest, @post ) == 0
-					post := {=>}
-				endif			
-				  
-			CASE LEFT(server["CONTENT_TYPE"], 19 ) == "multipart/form-data"
-			
-				post 	:= {=>}
-				files	:= {}
-				
-				UParseMultipart( @cRequest, @Post, @files )	
-
-			OTHERWISE 
-			
-				if oServer:lUtf8 
-					post["RAW"] := hb_UTF8ToStr( UUrlDecode( cRequest ) )
-				else
-					post["RAW"] := UUrlDecode( cRequest ) 
-				endif			
-				
-		ENDCASE 
-	
+ */
    ELSE
-   
-		//	Workaround of Rafa
 
-		if !empty( cRequest )
-	
-			if oServer:lUtf8 
-				post["RAW"] := hb_UTF8ToStr( UUrlDecode( cRequest ) )
-			else
-				post["RAW"] := UUrlDecode( cRequest ) 
-			endif
-		endif
-	
-  ENDIF
-RETURN NIL
+      USetStatusCode( 404 )
 
-// Check--> https://www.geeksforgeeks.org/how-to-upload-files-asynchronously-using-jquery/ 
 
-//	------------------------------------------------------------------- //
+ /*No chuta
+ if UIsAjax()
+  UWrite( "Route don't exist => " +  cMount )
+ endif
+ */
+   ENDIF
+
+   cDbg := server[ "REMOTE_HOST" ] + ':' + LTrim( Str( server[ "REMOTE_PORT" ] ) )
+
+
+// Metrics... <<-----------------------------------
+
+   hMtr[ 'key' ] := ''
+   hMtr[ 'run' ] := 0
+   hMtr[ 'time' ] := 0
+   hMtr[ 'max' ] := 0
+   hMtr[ 'min' ] := 999999
+   hMtr[ 'lapsus' ] := hb_MilliSeconds() - nT
+
+   hMtr[ 'metric' ]  := ''
+
+
+   IF hb_HHasKey( h, 'post' ) .AND. hb_HHasKey( h[ 'post' ], 'api' )
+
+      cDbg += ' >> Api ' + h[ 'post' ][ 'api' ] + ' => ' + h[ 'post' ][ 'proc' ] + ' : ' + LTrim( Str( hMtr[ 'lapsus' ] ) ) +  "ms"
+
+      hMtr[ 'key' ] := h[ 'post' ][ 'api' ] + ':' + h[ 'post' ][ 'proc' ]
+
+      hb_mutexLock( oServer:hmtxReq )
+
+      IF hb_HHasKey( oServer:hReq[ 'ip' ], server[ "REMOTE_ADDR" ] )
+         hMtr[ 'run' ]  :=  oServer:hReq[ 'ip' ][ server[ "REMOTE_ADDR" ]  ][ 'run' ] + 1
+         oServer:hReq[ 'ip' ][ server[ "REMOTE_ADDR" ] ] := { 'run' => hMtr[ 'run' ], 'last' => DToC( Date() ) + ' ' + Time() }
+      ELSE
+         oServer:hReq[ 'ip' ][ server[ "REMOTE_ADDR" ] ] := { 'run' => 1, 'last' => DToC( Date() ) + ' ' + Time() }
+      ENDIF
+
+      IF hb_HHasKey( oServer:hReq[ 'proc' ], hMtr[ 'key' ] )
+
+         hMtr[ 'run' ]  := oServer:hReq[ 'proc' ][ hMtr[ 'key' ] ][ 'run' ] + 1
+         hMtr[ 'time' ]  := oServer:hReq[ 'proc' ][ hMtr[ 'key' ] ][ 'time' ] + hMtr[ 'lapsus' ]
+         hMtr[ 'max' ]  := Max( oServer:hReq[ 'proc' ][ hMtr[ 'key' ] ][ 'max' ], hMtr[ 'lapsus' ] )
+         hMtr[ 'min' ]  := Min( oServer:hReq[ 'proc' ][ hMtr[ 'key' ] ][ 'min' ], hMtr[ 'lapsus' ] )
+
+         oServer:hReq[ 'proc' ][ hMtr[ 'key' ] ] := { 'run' => hMtr[ 'run' ], 'time' => hMtr[ 'time' ], 'min' => hMtr[ 'min' ], 'max' => hMtr[ 'max' ] }
+      ELSE
+         oServer:hReq[ 'proc' ][ hMtr[ 'key' ] ] := { 'run' => 1, 'time' => hMtr[ 'lapsus' ], 'min' => hMtr[ 'lapsus' ], 'max' => hMtr[ 'lapsus' ] }
+      ENDIF
+
+      hb_mutexUnlock( oServer:hmtxReq )
+
+
+   ELSE
+
+      cDbg += ' >> ' + cMount + " : " + LTrim( Str( hMtr[ 'lapsus' ] ) ) + "ms"
+
+      IF cMount != '/files/*' .AND. !( cMount == '/' ) .AND. lisRoute
+
+         hb_mutexLock( oServer:hmtxReq )
+
+         IF hb_HHasKey( oServer:hReq[ 'ip' ], server[ "REMOTE_ADDR" ] )
+            hMtr[ 'run' ]  :=  oServer:hReq[ 'ip' ][ server[ "REMOTE_ADDR" ]  ][ 'run' ] + 1
+            oServer:hReq[ 'ip' ][ server[ "REMOTE_ADDR" ] ] := { 'run' => hMtr[ 'run' ], 'last' => DToC( Date() ) + ' ' + Time() }
+         ELSE
+            oServer:hReq[ 'ip' ][ server[ "REMOTE_ADDR" ] ] := { 'run' => 1, 'last' => DToC( Date() ) + ' ' + Time() }
+         ENDIF
+
+         IF hb_HHasKey( oServer:hReq[ 'func' ], cMount )
+
+            hMtr[ 'run' ]  := oServer:hReq[ 'func' ][ cMount ][ 'run' ] + 1
+            hMtr[ 'time' ]  := oServer:hReq[ 'func' ][ cMount ][ 'time' ] + hMtr[ 'lapsus' ]
+            hMtr[ 'max' ]  := Max( oServer:hReq[ 'func' ][ cMount ][ 'max' ], hMtr[ 'lapsus' ] )
+            hMtr[ 'min' ]  := Min( oServer:hReq[ 'func' ][ cMount ][ 'min' ], hMtr[ 'lapsus' ] )
+
+            oServer:hReq[ 'func' ][ cMount ] := { 'run' => hMtr[ 'run' ], 'time' => hMtr[ 'time' ], 'min' => hMtr[ 'min' ], 'max' => hMtr[ 'max' ] }
+         ELSE
+            oServer:hReq[ 'func' ][ cMount ] := { 'run' => 1, 'time' => hMtr[ 'lapsus' ], 'min' => hMtr[ 'lapsus' ], 'max' => hMtr[ 'lapsus' ] }
+         ENDIF
+
+         hb_mutexUnlock( oServer:hmtxReq )
+
+      ENDIF
+
+      oServer:Dbg( cDbg )
+
+   ENDIF
+
+   RETURN ''
+
+FUNCTION DoMetric()
+
+   RETU NIL
+
+FUNCTION UGetInfoCode( oError, cCode, cCodePP )
+
+   LOCAL n, nL, nLineError, nOffset, nLin, nPos, cLine
+   LOCAL aTagLine := {}
+   LOCAL aLines := {}
+   LOCAL cText := ''
+   LOCAL cInfoCode := ''
+
+   hb_default( @cCode, '' )
+   hb_default( @cCodePP, '' )
+
+// En el código preprocesado, buscamos tags #line (#includes,#commands,...)
+
+   aLines = hb_ATokens( cCodePP, Chr( 10 ) )
+
+   FOR n = 1 TO Len( aLines )
+
+      cLine := aLines[ n ]
+
+      IF SubStr( cLine, 1, 5 ) == '#line'
+
+         nLin := Val( SubStr( cLine, 6 ) )
+
+         AAdd( aTagLine, { n, ( nLin - n - 1 ) } )
+
+
+      ENDIF
+
+   NEXT
+
+
+// Buscamos si oError nos da Linea
+
+   nL    := 0
+
+   IF ! Empty( oError:operation )
+
+      nPos := At(  'line:', oError:operation )
+
+      IF nPos > 0
+         nL := Val( SubStr( oError:operation, nPos + 5 ) )
+      ENDIF
+
+   ENDIF
+
+
+// Procesamos Offset segun linea error
+
+   nLineError := nL
+
+   IF nL > 0
+
+// Xec vectors
+// { nLine, nOffset }
+// { 1, 5 }, { 39, 8 }
+
+      FOR n := 1  TO Len( aTagLine )
+
+         IF aTagLine[ n ][ 1 ] < nL
+            nOffset  := aTagLine[ n ][ 2 ]
+            nLineError := nL + nOffset
+         ENDIF
+
+      NEXT
+
+      nLineError -= 1 // __Inline() + CRLF
+
+   ELSE
+
+
+
+   ENDIF
+
+
+   IF At(  'line:', oError:operation ) > 0
+      oError:operation := 'Line: ' + LTrim( Str( nLineError ) )
+   ENDIF
+
+   IF ! Empty( cCode )
+      cInfoCode += UErrorGetCode( cCode, nLineError )
+   ENDIF
+
+
+   RETU cInfoCode
+
+FUNCTION UIsAjax()
+
+   LOCAL lIsAjax := .F.
+
+   IF hb_HHasKey( server, 'HTTP_X_REQUESTED_WITH' )
+      lIsAjax := Lower( server[ 'HTTP_X_REQUESTED_WITH' ] ) == 'xmlhttprequest'
+   ENDIF
+
+   RETU lIsAjax
+
+FUNCTION USetErrorStatus( nStatus, cPage, cAjax )
+
+   oServer:SetErrorStatus( nStatus, cPage, cAjax )
+   RETU NIL
+
+STATIC FUNCTION ParseRequestHeader( cRequest )
+
+   LOCAL aRequest, aLine, nI, nJ, cI, nK, nL, nContentLength := 0
+   LOCAL aCookies
+
+   nI := At( CR_LF + CR_LF, cRequest )
+   aRequest := hb_ATokens( Left( cRequest, nI - 1 ), CR_LF )
+   cRequest := SubStr( cRequest, nI + 4 )
+
+   aLine := hb_ATokens( aRequest[ 1 ], " " )
+
+   server[ "REQUEST_ALL" ] := aRequest[ 1 ]
+   IF Len( aLine ) == 3 .AND. Left( aLine[ 3 ], 5 ) == "HTTP/"
+      server[ "REQUEST_METHOD" ] := aLine[ 1 ]
+      server[ "REQUEST_URI" ] := aLine[ 2 ]
+      server[ "SERVER_PROTOCOL" ] := aLine[ 3 ]
+   ELSE
+      server[ "REQUEST_METHOD" ] := aLine[ 1 ]
+      server[ "REQUEST_URI" ] := iif( Len( aLine ) >= 2, aLine[ 2 ], "" )
+      server[ "SERVER_PROTOCOL" ] := iif( Len( aLine ) >= 3, aLine[ 3 ], "" )
+      RETURN NIL
+   ENDIF
+
+   // Fix invalid queries: bind to root
+   IF !( Left( server[ "REQUEST_URI" ], 1 ) == "/" )
+      server[ "REQUEST_URI" ] := "/" + server[ "REQUEST_URI" ]
+   ENDIF
+
+   IF ( nI := At( "?", server[ "REQUEST_URI" ] ) ) > 0
+      server[ "SCRIPT_NAME" ] := Left( server[ "REQUEST_URI" ], nI - 1 )
+      server[ "QUERY_STRING" ] := SubStr( server[ "REQUEST_URI" ], nI + 1 )
+   ELSE
+      server[ "SCRIPT_NAME" ] := server[ "REQUEST_URI" ]
+      server[ "QUERY_STRING" ] := ""
+   ENDIF
+
+   server[ "HTTP_ACCEPT" ] := ""
+   server[ "HTTP_ACCEPT_CHARSET" ] := ""
+   server[ "HTTP_ACCEPT_ENCODING" ] := ""
+   server[ "HTTP_ACCEPT_LANGUAGE" ] := ""
+   server[ "HTTP_CONNECTION" ] := ""
+   server[ "HTTP_HOST" ] := ""
+   server[ "HTTP_KEEP_ALIVE" ] := ""
+   server[ "HTTP_REFERER" ] := ""
+   server[ "HTTP_USER_AGENT" ] := ""
+
+
+   FOR nI := 2 TO Len( aRequest )
+      IF aRequest[ nI ] == "";  EXIT
+      ELSEIF ( nJ := At( ":", aRequest[ nI ] ) ) > 0
+         cI := AllTrim( SubStr( aRequest[ nI ], nJ + 1 ) )
+         SWITCH Upper( Left( aRequest[ nI ], nJ - 1 ) )
+         CASE "COOKIE"
+
+            server[ "HTTP_COOKIE" ] := cI
+
+            aCookies = hb_ATokens( cI, ';' )
+
+            FOR nL = 1 TO Len( aCookies )
+               nK := At( '=', aCookies[ nL ] )
+
+               IF nK > 0
+                  cookie[ AllTrim( Upper( Left( aCookies[ nL ], nK - 1 ) ) ) ] := AllTrim( SubStr( aCookies[ nL ], nK + 1 ) )
+               ENDIF
+            NEXT
+
+            EXIT
+         CASE "CONTENT-LENGTH"
+            nContentLength := Val( cI )
+            EXIT
+         CASE "CONTENT-TYPE"
+            server[ "CONTENT_TYPE" ] := cI
+            EXIT
+
+         OTHERWISE
+            server[ "HTTP_" + StrTran( Upper( Left( aRequest[ nI ], nJ - 1 ) ), "-", "_" ) ] := cI
+            EXIT
+         ENDSWITCH
+      ENDIF
+   NEXT
+   IF !( server[ "QUERY_STRING" ] == "" )
+      FOR EACH cI IN hb_ATokens( server[ "QUERY_STRING" ], "&" )
+         IF ( nI := At( "=", cI ) ) > 0
+            GET[ UUrlDecode( Left( cI, nI - 1 ) ) ] := UUrlDecode( SubStr( cI, nI + 1 ) )
+         ELSE
+            GET[ UUrlDecode( cI ) ] := NIL
+         ENDIF
+      NEXT
+   ENDIF
+
+   RETURN nContentLength
+
+
+
+STATIC FUNCTION ParseRequestBody( cRequest, oServer )
+
+   LOCAL nI, cPart
+   LOCAL cEncoding := ''
+
+   IF hb_HHasKey( server, "CONTENT_TYPE" )
+
+      IF ( nI := At( "CHARSET=", Upper( server[ "CONTENT_TYPE" ] ) ) ) > 0
+         cEncoding := Upper( SubStr( server[ "CONTENT_TYPE" ], nI + 8 ) )
+      ENDIF
+
+      DO CASE
+
+      CASE Left( server[ "CONTENT_TYPE" ], 33 ) == "application/x-www-form-urlencoded"
+
+         IF !( cRequest == "" )
+            IF cEncoding == "UTF-8" .AND. oServer:lUtf8 == .F.   // Transform UTF8toStr
+               FOR EACH cPart IN hb_ATokens( cRequest, "&" )
+                  IF ( nI := At( "=", cPart ) ) > 0
+                     post[ hb_UTF8ToStr( UUrlDecode( Left( cPart, nI - 1 ) ) ) ] := hb_UTF8ToStr( UUrlDecode( SubStr( cPart, nI + 1 ) ) )
+                  ELSE
+                     post[ hb_UTF8ToStr( UUrlDecode( cPart ) ) ] := NIL
+                  ENDIF
+               NEXT
+            ELSE
+               FOR EACH cPart IN hb_ATokens( cRequest, "&" )
+                  IF ( nI := At( "=", cPart ) ) > 0
+                     post[ UUrlDecode( Left( cPart, nI - 1 ) ) ] := UUrlDecode( SubStr( cPart, nI + 1 ) )
+                  ELSE
+                     post[ UUrlDecode( cPart ) ] := NIL
+                  ENDIF
+               NEXT
+            ENDIF
+
+         ENDIF
+
+      CASE Left( server[ "CONTENT_TYPE" ], 16 ) == "application/json" // Workaround of Quim
+
+         IF hb_jsonDecode( cRequest, @post ) == 0
+            post := { => }
+         ENDIF
+
+      CASE Left( server[ "CONTENT_TYPE" ], 19 ) == "multipart/form-data"
+
+         post  := { => }
+         files := {}
+
+         UParseMultipart( @cRequest, @Post, @files )
+
+      OTHERWISE
+
+         IF oServer:lUtf8
+            post[ "RAW" ] := hb_UTF8ToStr( UUrlDecode( cRequest ) )
+         ELSE
+            post[ "RAW" ] := UUrlDecode( cRequest )
+         ENDIF
+
+      ENDCASE
+
+   ELSE
+
+// Workaround of Rafa
+
+      IF !Empty( cRequest )
+
+         IF oServer:lUtf8
+            post[ "RAW" ] := hb_UTF8ToStr( UUrlDecode( cRequest ) )
+         ELSE
+            post[ "RAW" ] := UUrlDecode( cRequest )
+         ENDIF
+      ENDIF
+
+   ENDIF
+
+   RETURN NIL
+
+// Check--> https://www.geeksforgeeks.org/how-to-upload-files-asynchronously-using-jquery/
+
+// ------------------------------------------------------------------- //
 
 FUNCTION UGetServer(); RETU oServer
+
 FUNCTION UGetServerInfo(); RETU oServer:aInfo
-FUNCTION USetServerInfo( cKey, uValue ); RETU  oServer:SetInfo( cKey, uValue )	
-FUNCTION UGetParams(); retu server
-FUNCTION UIsRunning(); retu oServer:lInit 
 
+FUNCTION USetServerInfo( cKey, uValue ); RETU  oServer:SetInfo( cKey, uValue )
 
-//FUNCTION UGetStatistics(); RETU oServer
-FUNCTION UGetRoutes(); retu oServer:aConfig[ 'Mount' ]
-FUNCTION UGetMethod(); RETU server['REQUEST_METHOD']
+FUNCTION UGetParams(); RETU server
 
+FUNCTION UIsRunning(); RETU oServer:lInit
 
-FUNCTION UGetMethodsRoute()	//	Methods defined in route:  GET, POST
+FUNCTION UGetInfoSSL()
 
-	local cMethods := ''
-	local c			:= ''
-	local aRoutes 	:= UGetRoutes() 
-	local cRoute	:= UGetParams()[ 'route' ]
-	local nI, nLen 
-	local aMethods
+   LOCAL hInfo := { => }
 
-	if HB_HHasKey( aRoutes, cRoute )
-	
-		c  := aRoutes[cRoute][ 'method' ]
-	
-		aMethods 	:= hb_Atokens( c , ',' )
-		nLen 		:= len( aMethods )
-		
-		for nI := 1 to nLen 		
-			
-			if aMethods[nI] != '*'
-				if ! empty( cMethods )
-					cMethods += ', '
-				endif
-				cMethods += aMethods[nI]
-			endif
-			
-		next 
+   IF hb_HGetDef( server, 'HTTPS', .F. )
 
-	endif
+      hInfo[ 'SSL_CIPHER'  ] := hb_HGetDef( server, 'SSL_CIPHER', '' )
+      hInfo[ 'SSL_PROTOCOL'  ] := hb_HGetDef( server, 'SSL_PROTOCOL', '' )
+      hInfo[ 'SSL_CIPHER_USEKEYSIZE'  ] := hb_HGetDef( server, 'SSL_CIPHER_USEKEYSIZE', '' )
+      hInfo[ 'SSL_CIPHER_ALGKEYSIZE'  ] := hb_HGetDef( server, 'SSL_CIPHER_ALGKEYSIZE', '' )
+      hInfo[ 'SSL_VERSION_LIBRARY'  ] := hb_HGetDef( server, 'SSL_VERSION_LIBRARY', '' )
+      hInfo[ 'SSL_SERVER_I_DN'  ] := hb_HGetDef( server, 'SSL_SERVER_I_DN', '' )
+      hInfo[ 'SSL_SERVER_S_DN'  ] := hb_HGetDef( server, 'SSL_SERVER_S_DN', '' )
+      hInfo[ 'SSL_SERVER_S_DN'  ] := hb_HGetDef( server, 'SSL_SERVER_S_DN', '' )
+      hInfo[ 'SSL_SERVER_S_DN'  ] := hb_HGetDef( server, 'SSL_SERVER_S_DN', '' )
 
-RETU cMethods 
-  
+   ENDIF
+
+   RETU hInfo
+
+// FUNCTION UGetStatistics(); RETU oServer
+
+FUNCTION UGetRoutes(); RETU oServer:aConfig[ 'Mount' ]
+
+FUNCTION UGetMethod(); RETU server[ 'REQUEST_METHOD' ]
+
+FUNCTION UGetMethodsRoute() // Methods defined in route:  GET, POST
+
+   LOCAL cMethods := ''
+   LOCAL c   := ''
+   LOCAL aRoutes  := UGetRoutes()
+   LOCAL cRoute := UGetParams()[ 'route' ]
+   LOCAL nI, nLen
+   LOCAL aMethods
+
+   IF hb_HHasKey( aRoutes, cRoute )
+
+      c  := aRoutes[ cRoute ][ 'method' ]
+
+      aMethods  := hb_ATokens( c, ',' )
+      nLen   := Len( aMethods )
+
+      FOR nI := 1 TO nLen
+
+         IF aMethods[ nI ] != '*'
+            IF ! Empty( cMethods )
+               cMethods += ', '
+            ENDIF
+            cMethods += aMethods[ nI ]
+         ENDIF
+
+      NEXT
+
+   ENDIF
+
+   RETU cMethods
+
 FUNCTION UGetRoutesList( uCargo )
-	local hRoutes 	:= UGetRoutes()
-	local aRoutes	:= {}
-	local nLen 		:= len(hRoutes)
-	local nI, cId, aPair, hData
-	
-	hb_default( @uCargo, '' )
-	
-	if empty( uCargo )
-		for nI := 1 to nLen 
-			Aadd( aRoutes, HB_HKeyAt( hRoutes, nI ) )		
-		next 	
-	else
-		for nI := 1 to nLen 
-			aPair  	:= HB_HPairAt( hRoutes, nI )
-			cId 	:= aPair[1]
-			hData	:= aPair[2]
-			if hData[ 'cargo' ] == uCargo
-				Aadd( aRoutes, cId )		
-			endif
-		next 		
-	endif
 
-retu aRoutes
+   LOCAL hRoutes  := UGetRoutes()
+   LOCAL aRoutes := {}
+   LOCAL nLen   := Len( hRoutes )
+   LOCAL nI, cId, aPair, hData
+
+   hb_default( @uCargo, '' )
+
+   IF Empty( uCargo )
+      FOR nI := 1 TO nLen
+         AAdd( aRoutes, hb_HKeyAt( hRoutes, nI ) )
+      NEXT
+   ELSE
+      FOR nI := 1 TO nLen
+         aPair   := hb_HPairAt( hRoutes, nI )
+         cId  := aPair[ 1 ]
+         hData := aPair[ 2 ]
+         IF hData[ 'cargo' ] == uCargo
+            AAdd( aRoutes, cId )
+         ENDIF
+      NEXT
+   ENDIF
+
+   RETU aRoutes
 
 FUNCTION UIsRoute( cKey )
 
-	local nPos
-	
-	hb_default( @cKey, '' )
-	
-	cKey := lower( cKey )
-	
-	nPos := Ascan( oServer:aConfig[ 'Mount' ], {|x| lower(x) == cKey } )
-	
-retu nPos > 0
+   LOCAL nPos
+
+   hb_default( @cKey, '' )
+
+   cKey := Lower( cKey )
+
+   nPos := AScan( oServer:aConfig[ 'Mount' ], {| x | Lower( x ) == cKey } )
+
+   RETU nPos > 0
 
 
-//	------------------------------------------------------------------- //
+// ------------------------------------------------------------------- //
 
 FUNCTION UGet( cKey, uDefault )
 
-	hb_default( @cKey, '' )
-	hb_default( @uDefault, '' )
-	
-	if empty( cKey )
-		retu get 
-	endif	
+   hb_default( @cKey, '' )
+   hb_default( @uDefault, '' )
 
-	HB_HCaseMatch( get, .f. )
-	
-retu HB_HGetDef( get, cKey, uDefault ) 
+   IF Empty( cKey )
+      RETU GET
+   ENDIF
 
-//	------------------------------------------------------------------- //
+   hb_HCaseMatch( GET, .F. )
+
+   RETU hb_HGetDef( GET, cKey, uDefault )
+
+// ------------------------------------------------------------------- //
 
 FUNCTION UPost( cKey, uDefault )
 
-	hb_default( @cKey, '' )
-	hb_default( @uDefault, '' )
-	
-	if empty( cKey )
-		retu post
-	endif	
+   hb_default( @cKey, '' )
+   hb_default( @uDefault, '' )
 
-	HB_HCaseMatch( post, .f. )
-	
-retu HB_HGetDef( post, cKey, uDefault ) 
-	
-//	------------------------------------------------------------------- //
+   IF Empty( cKey )
+      RETU post
+   ENDIF
+
+   hb_HCaseMatch( post, .F. )
+
+   RETU hb_HGetDef( post, cKey, uDefault )
+
+// ------------------------------------------------------------------- //
 
 FUNCTION UCookie( cKey, uDefault )
 
-	hb_default( @cKey, '' )
-	hb_default( @uDefault, '' )
-	
-	if empty( cKey )
-		retu cookie
-	endif	
+   hb_default( @cKey, '' )
+   hb_default( @uDefault, '' )
 
-	HB_HCaseMatch( cookie, .f. )
-	
-retu HB_HGetDef( cookie, cKey, uDefault ) 
-	
-//	------------------------------------------------------------------- //
+   IF Empty( cKey )
+      RETU cookie
+   ENDIF
+
+   hb_HCaseMatch( cookie, .F. )
+
+   RETU hb_HGetDef( cookie, cKey, uDefault )
+
+// ------------------------------------------------------------------- //
 
 FUNCTION UFiles()
 
-retu files
+   RETU files
 
-//	------------------------------------------------------------------- //
+// ------------------------------------------------------------------- //
 
 FUNCTION UServer( cKey, uDefault )
 
-	hb_default( @cKey, '' )
-	hb_default( @uDefault, '' )
-	
-	if empty( cKey )
-		retu server 
-	endif
+   hb_default( @cKey, '' )
+   hb_default( @uDefault, '' )
 
-	HB_HCaseMatch( server, .f. )
-	
-retu HB_HGetDef( server, cKey, uDefault ) 
-	
-//	------------------------------------------------------------------- //
+   IF Empty( cKey )
+      RETU server
+   ENDIF
 
-STATIC FUNC MakeResponse()
-LOCAL cRet, cStatus
-LOCAL  aErrorStatus, nPos, cFile
+   hb_HCaseMatch( server, .F. )
 
-  IF UGetHeader("Content-Type") == NIL
-    UAddHeader("Content-Type", "text/html")
-  ENDIF
-  UAddHeader("Date", HttpDateFormat(HB_DATETIME()))
+   RETU hb_HGetDef( server, cKey, uDefault )
 
-  cRet := IIF(server["SERVER_PROTOCOL"] == "HTTP/1.0", "HTTP/1.0 ", "HTTP/1.1 ")
-  SWITCH s_nStatusCode
-    CASE 100 ;  cStatus := "100 Continue"                        ;  EXIT
-    CASE 101 ;  cStatus := "101 Switching Protocols"             ;  EXIT
-    CASE 200 ;  cStatus := "200 OK"                              ;  EXIT
-    CASE 201 ;  cStatus := "201 Created"                         ;  EXIT
-    CASE 202 ;  cStatus := "202 Accepted"                        ;  EXIT
-    CASE 203 ;  cStatus := "203 Non-Authoritative Information"   ;  EXIT
-    CASE 204 ;  cStatus := "204 No Content"                      ;  EXIT
-    CASE 205 ;  cStatus := "205 Reset Content"                   ;  EXIT
-    CASE 206 ;  cStatus := "206 Partial Content"                 ;  EXIT
-    CASE 300 ;  cStatus := "300 Multiple Choices"                ;  EXIT
-    CASE 301 ;  cStatus := "301 Moved Permanently"               ;  EXIT
-    CASE 302 ;  cStatus := "302 Found"                           ;  EXIT
-    CASE 303 ;  cStatus := "303 See Other"                       ;  EXIT
-    CASE 304 ;  cStatus := "304 Not Modified"                    ;  EXIT
-    CASE 305 ;  cStatus := "305 Use Proxy"                       ;  EXIT
-    CASE 307 ;  cStatus := "307 Temporary Redirect"              ;  EXIT
-    CASE 400 ;  cStatus := "400 Bad Request"                     ;  EXIT
-    CASE 401 ;  cStatus := "401 Unauthorized"                    ;  EXIT
-    CASE 402 ;  cStatus := "402 Payment Required"                ;  EXIT
-    CASE 403 ;  cStatus := "403 Forbidden"                       ;  EXIT
-    CASE 404 ;  cStatus := "404 Not Found"                       ;  EXIT
-    CASE 405 ;  cStatus := "405 Method Not Allowed"              ;  EXIT
-    CASE 406 ;  cStatus := "406 Not Acceptable"                  ;  EXIT
-    CASE 407 ;  cStatus := "407 Proxy Authentication Required"   ;  EXIT
-    CASE 408 ;  cStatus := "408 Request Timeout"                 ;  EXIT
-    CASE 409 ;  cStatus := "409 Conflict"                        ;  EXIT
-    CASE 410 ;  cStatus := "410 Gone"                            ;  EXIT
-    CASE 411 ;  cStatus := "411 Length Required"                 ;  EXIT
-    CASE 412 ;  cStatus := "412 Precondition Failed"             ;  EXIT
-    CASE 413 ;  cStatus := "413 Request Entity Too Large"        ;  EXIT
-    CASE 414 ;  cStatus := "414 Request-URI Too Long"            ;  EXIT
-    CASE 415 ;  cStatus := "415 Unsupprted Media Type"           ;  EXIT                                                       
-    CASE 416 ;  cStatus := "416 Requested Range Not Satisfiable" ;  EXIT
-    CASE 417 ;  cStatus := "417 Expectation Failed"              ;  EXIT
-    CASE 500 ;  cStatus := "500 Internal Server Error"           ;  EXIT
-    CASE 501 ;  cStatus := "501 Not Implemented"                 ;  EXIT
-    CASE 502 ;  cStatus := "502 Bad Gateway"                     ;  EXIT
-    CASE 503 ;  cStatus := "503 Service Unavailable"             ;  EXIT
-    CASE 504 ;  cStatus := "504 Gateway Timeout"                 ;  EXIT
-    CASE 505 ;  cStatus := "505 HTTP Version Not Supported"      ;  EXIT
-    OTHERWISE
+// ------------------------------------------------------------------- //
+
+STATIC FUNCTION MakeResponse()
+
+   LOCAL cRet, cStatus
+   LOCAL  aErrorStatus, nPos, cFile
+
+   IF UGetHeader( "Content-Type" ) == NIL
+      UAddHeader( "Content-Type", "text/html" )
+   ENDIF
+   UAddHeader( "Date", HttpDateFormat( hb_DateTime() ) )
+
+   cRet := iif( server[ "SERVER_PROTOCOL" ] == "HTTP/1.0", "HTTP/1.0 ", "HTTP/1.1 " )
+   SWITCH s_nStatusCode
+   CASE 100 ;  cStatus := "100 Continue"                        ;  EXIT
+   CASE 101 ;  cStatus := "101 Switching Protocols"             ;  EXIT
+   CASE 200 ;  cStatus := "200 OK"                              ;  EXIT
+   CASE 201 ;  cStatus := "201 Created"                         ;  EXIT
+   CASE 202 ;  cStatus := "202 Accepted"                        ;  EXIT
+   CASE 203 ;  cStatus := "203 Non-Authoritative Information"   ;  EXIT
+   CASE 204 ;  cStatus := "204 No Content"                      ;  EXIT
+   CASE 205 ;  cStatus := "205 Reset Content"                   ;  EXIT
+   CASE 206 ;  cStatus := "206 Partial Content"                 ;  EXIT
+   CASE 300 ;  cStatus := "300 Multiple Choices"                ;  EXIT
+   CASE 301 ;  cStatus := "301 Moved Permanently"               ;  EXIT
+   CASE 302 ;  cStatus := "302 Found"                           ;  EXIT
+   CASE 303 ;  cStatus := "303 See Other"                       ;  EXIT
+   CASE 304 ;  cStatus := "304 Not Modified"                    ;  EXIT
+   CASE 305 ;  cStatus := "305 Use Proxy"                       ;  EXIT
+   CASE 307 ;  cStatus := "307 Temporary Redirect"              ;  EXIT
+   CASE 400 ;  cStatus := "400 Bad Request"                     ;  EXIT
+   CASE 401 ;  cStatus := "401 Unauthorized"                    ;  EXIT
+   CASE 402 ;  cStatus := "402 Payment Required"                ;  EXIT
+   CASE 403 ;  cStatus := "403 Forbidden"                       ;  EXIT
+   CASE 404 ;  cStatus := "404 Not Found"                       ;  EXIT
+   CASE 405 ;  cStatus := "405 Method Not Allowed"              ;  EXIT
+   CASE 406 ;  cStatus := "406 Not Acceptable"                  ;  EXIT
+   CASE 407 ;  cStatus := "407 Proxy Authentication Required"   ;  EXIT
+   CASE 408 ;  cStatus := "408 Request Timeout"                 ;  EXIT
+   CASE 409 ;  cStatus := "409 Conflict"                        ;  EXIT
+   CASE 410 ;  cStatus := "410 Gone"                            ;  EXIT
+   CASE 411 ;  cStatus := "411 Length Required"                 ;  EXIT
+   CASE 412 ;  cStatus := "412 Precondition Failed"             ;  EXIT
+   CASE 413 ;  cStatus := "413 Request Entity Too Large"        ;  EXIT
+   CASE 414 ;  cStatus := "414 Request-URI Too Long"            ;  EXIT
+   CASE 415 ;  cStatus := "415 Unsupprted Media Type"           ;  EXIT
+   CASE 416 ;  cStatus := "416 Requested Range Not Satisfiable" ;  EXIT
+   CASE 417 ;  cStatus := "417 Expectation Failed"              ;  EXIT
+   CASE 500 ;  cStatus := "500 Internal Server Error"           ;  EXIT
+   CASE 501 ;  cStatus := "501 Not Implemented"                 ;  EXIT
+   CASE 502 ;  cStatus := "502 Bad Gateway"                     ;  EXIT
+   CASE 503 ;  cStatus := "503 Service Unavailable"             ;  EXIT
+   CASE 504 ;  cStatus := "504 Gateway Timeout"                 ;  EXIT
+   CASE 505 ;  cStatus := "505 HTTP Version Not Supported"      ;  EXIT
+   OTHERWISE
       cStatus := "500 Internal Server Error"
-  ENDSWITCH
+   ENDSWITCH
 
-  cRet += cStatus + CR_LF
-  
-  IF s_nStatusCode != 200
-  
-	aErrorStatus := uGetServerInfo()[ 'errorstatus' ]
-	
-	nPos := Ascan( aErrorStatus, {|u| u['status'] == s_nStatusCode } )
- 
-	IF nPos > 0
-	
-		s_cResult := ''
-		cFile := ''
-	
-		 IF UIsAjax()			
-			cFile := aErrorStatus[ nPos ][ 'ajax' ] 			
-		 else 		 
-			cFile := aErrorStatus[ nPos ][ 'page' ] 			
-		 endif 
-		 
-		if file( UGetServer():cPathHtml + '\'  + cFile )
-			s_cResult := ULoadHtml( cFile )
-		else 
-			s_cResult := cFile
-		endif		 
+   cRet += cStatus + CR_LF
 
-	ELSE
-		s_cResult := "<html><body><h1>" + cStatus + "</h1></body></html>"
-	ENDIF
-  ENDIF
-  UAddHeader("Content-Length", LTRIM(STR(LEN(s_cResult))))
-  AEVAL(s_aHeader, {|x| cRet += x[1] + ": " + x[2] + CR_LF})
-  
-  
+   IF s_nStatusCode != 200
 
-  cRet += CR_LF
-  //? cRet
-  cRet += s_cResult
-  
-  
-  
-  
-RETURN cRet
+      aErrorStatus := uGetServerInfo()[ 'errorstatus' ]
 
+      nPos := AScan( aErrorStatus, {| u | u[ 'status' ] == s_nStatusCode } )
 
-STATIC FUNC HttpDateFormat(tDate)
-  tDate -= HB_UTCOFFSET() / (3600 * 24)
-RETURN {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}[DOW(tDate)] + ", " + ;
-       PADL(DAY(tDate), 2, "0") + " " + ;
-       {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}[MONTH(tDate)] + ;
-       " " + PADL(YEAR(tDate), 4, "0") + " " + HB_TTOC(tDate, "", "HH:MM:SS") + " GMT" // TOFIX: time zone
+      IF nPos > 0
 
+         s_cResult := ''
+         cFile := ''
 
-STATIC FUNC HttpDateUnformat(cDate, tDate)
-LOCAL nMonth, tI
-  // TODO: support outdated compatibility format RFC2616
-  IF LEN(cDate) == 29 .AND. RIGHT(cDate, 4) == " GMT" .AND. SUBSTR(cDate, 4, 2) == ", "
-    nMonth := ASCAN({"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", ;
-                     "Oct", "Nov", "Dec"}, SUBSTR(cDate, 9, 3))
-    IF nMonth > 0
-      tI := HB_STOT(SUBSTR(cDate, 13, 4) + PADL(nMonth, 2, "0") + SUBSTR(cDate, 6, 2) + STRTRAN(SUBSTR(cDate, 18, 8), ":", ""))
-      IF ! EMPTY(tI)
-        tDate := tI + HB_UTCOFFSET() / (3600 * 24)
-        RETURN .T.
+         IF UIsAjax()
+            cFile := aErrorStatus[ nPos ][ 'ajax' ]
+         ELSE
+            cFile := aErrorStatus[ nPos ][ 'page' ]
+         ENDIF
+
+         IF File( UGetServer():cPathHtml + '\'  + cFile )
+            s_cResult := ULoadHtml( cFile )
+         ELSE
+            s_cResult := cFile
+         ENDIF
+
+      ELSE
+         s_cResult := "<html><body><h1>" + cStatus + "</h1></body></html>"
       ENDIF
-    ENDIF
-  ENDIF
-RETURN .F.
+   ENDIF
+   UAddHeader( "Content-Length", LTrim( Str( Len( s_cResult ) ) ) )
+   AEval( s_aHeader, {| x | cRet += x[ 1 ] + ": " + x[ 2 ] + CR_LF } )
+
+
+
+   cRet += CR_LF
+   // ? cRet
+   cRet += s_cResult
+
+   RETURN cRet
+
+
+STATIC FUNCTION HttpDateFormat( tDate )
+
+   tDate -= hb_UTCOffset() / ( 3600 * 24 )
+
+   RETURN { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" }[ DoW( tDate ) ] + ", " + ;
+      PadL( Day( tDate ), 2, "0" ) + " " + ;
+      { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" }[ Month( tDate ) ] + ;
+      " " + PadL( Year( tDate ), 4, "0" ) + " " + hb_TToC( tDate, "", "HH:MM:SS" ) + " GMT" // TOFIX: time zone
+
+
+STATIC FUNCTION HttpDateUnformat( cDate, tDate )
+
+   LOCAL nMonth, tI
+
+   // TODO: support outdated compatibility format RFC2616
+   IF Len( cDate ) == 29 .AND. Right( cDate, 4 ) == " GMT" .AND. SubStr( cDate, 4, 2 ) == ", "
+      nMonth := AScan( { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", ;
+         "Oct", "Nov", "Dec" }, SubStr( cDate, 9, 3 ) )
+      IF nMonth > 0
+         tI := hb_SToT( SubStr( cDate, 13, 4 ) + PadL( nMonth, 2, "0" ) + SubStr( cDate, 6, 2 ) + StrTran( SubStr( cDate, 18, 8 ), ":", "" ) )
+         IF ! Empty( tI )
+            tDate := tI + hb_UTCOffset() / ( 3600 * 24 )
+            RETURN .T.
+         ENDIF
+      ENDIF
+   ENDIF
+
+   RETURN .F.
 
 
 /********************************************************************
   Public functions
 ********************************************************************/
-PROC USetStatusCode(nStatusCode)
-  s_nStatusCode := nStatusCode
-RETURN
+PROC USetStatusCode( nStatusCode )
+
+   s_nStatusCode := nStatusCode
+
+   RETURN
 
 
 
-FUNC UGetHeader(cType)
-	LOCAL nI
-	
-	hb_default( @cType, '' )
-	
-	if !empty(cType) 
-		IF (nI := ASCAN(s_aHeader, {|x| UPPER(x[1]) == UPPER(cType)})) > 0
-			RETURN s_aHeader[nI, 2]
-		ENDIF
-	else	
-		retu s_aHeader	
-	endif
-	
-RETURN NIL
+FUNCTION UGetHeader( cType )
+
+   LOCAL nI
+
+   hb_default( @cType, '' )
+
+   IF !Empty( cType )
+      IF ( nI := AScan( s_aHeader, {| x | Upper( x[ 1 ] ) == Upper( cType ) } ) ) > 0
+         RETURN s_aHeader[ nI, 2 ]
+      ENDIF
+   ELSE
+      RETU s_aHeader
+   ENDIF
+
+   RETURN NIL
 
 
-FUNC UAddHeader(cType, cValue)
-LOCAL nI
+FUNCTION UAddHeader( cType, cValue )
 
-	IF pCount() == 0
-		retu s_aHeader 
-	ENDIF
+   LOCAL nI
 
-  IF (nI := ASCAN(s_aHeader, {|x| UPPER(x[1]) == UPPER(cType)})) > 0
-    s_aHeader[nI, 2] := cValue
-  ELSE
-    AADD(s_aHeader, {cType, cValue})
-  ENDIF
-  
-RETURN NIL 
+   IF PCount() == 0
+      RETU s_aHeader
+   ENDIF
 
+   IF ( nI := AScan( s_aHeader, {| x | Upper( x[ 1 ] ) == Upper( cType ) } ) ) > 0
+      s_aHeader[ nI, 2 ] := cValue
+   ELSE
+      AAdd( s_aHeader, { cType, cValue } )
+   ENDIF
 
-PROC URedirect(cURL, nCode)
-
-	local xRet
-	
-	IF nCode == NIL;  nCode := 303
-	ENDIF
+   RETURN NIL
 
 
-	if UIsAjax()
+PROC URedirect( cURL, nCode )
 
-		UAddHeader("Content-Type", "application/json")
-		
-		xRet := {=>}
-		
-		xRet[ 'url' ] := cURL
-		xRet[ 'target' ] := '_self'				
-		
-		UWrite( hb_jsonEncode( { 'url' => xRet } ) )
-		
-	else
+   LOCAL xRet
 
-		USetStatusCode(nCode)
-		UAddHeader("Location", cURL)
-
-	endif
-  
-RETURN
-
-FUNCTION UWrite(...)
-
-    LOCAL aParams 	:= hb_AParams()
-    LOCAL n    		:= Len( aParams )
-    LOCAL i
-
-    IF n == 0
-       RETURN NIL
-    ENDIF
-
-	FOR i = 1 TO n - 1
-	  s_cResult += UValtoChar( aParams[ i ] ) + ' '
- 
-	NEXT
-
-	s_cResult += UValtoChar( aParams[ n ] )
-
-   
-retu nil 
+   IF nCode == NIL;  nCode := 303
+   ENDIF
 
 
-FUNC UOsFileName(cFileName)
-  IF HB_OSPathSeparator() != "/"
-    RETURN STRTRAN(cFileName, "/", HB_OSPathSeparator())
-  ENDIF
-RETURN cFileName
+   IF UIsAjax()
+
+      UAddHeader( "Content-Type", "application/json" )
+
+      xRet := { => }
+
+      xRet[ 'url' ] := cURL
+      xRet[ 'target' ] := '_self'
+
+      UWrite( hb_jsonEncode( { 'url' => xRet } ) )
+
+   ELSE
+
+      USetStatusCode( nCode )
+      UAddHeader( "Location", cURL )
+
+   ENDIF
+
+   RETURN
+
+FUNCTION UWrite( ... )
+
+   LOCAL aParams  := hb_AParams()
+   LOCAL n      := Len( aParams )
+   LOCAL i
+
+   IF n == 0
+      RETURN NIL
+   ENDIF
+
+   FOR i = 1 TO n - 1
+      s_cResult += UValtoChar( aParams[ i ] ) + ' '
+
+   NEXT
+
+   s_cResult += UValtoChar( aParams[ n ] )
 
 
-FUNC UHtmlEncode(cString)
-   local cChar, cResult := "" 
+   RETU NIL
 
-   for each cChar in cString
-      do case
-      case cChar == "<"
-            cChar = "&lt;"
+FUNCTION UOsFileName( cFileName )
 
-      case cChar == '>'
-            cChar = "&gt;"     
-            
-      case cChar == "&"
-            cChar = "&amp;"     
+   IF hb_osPathSeparator() != "/"
+      RETURN StrTran( cFileName, "/", hb_osPathSeparator() )
+   ENDIF
 
-      case cChar == '"'
-            cChar = "&quot;"    
-            
-      case cChar == " "
-            cChar = "&nbsp;"               
-      endcase
-      cResult += cChar 
-   next
-    
-return cResult 
+   RETURN cFileName
 
 
-FUNC UUrlEncode(cString)
-  LOCAL nI, cI, cRet := ""
+FUNCTION UHtmlEncode( cString )
 
-  FOR nI := 1 TO LEN(cString)
-    cI := SUBSTR(cString, nI, 1)
-    IF cI == " "
-      cRet += "+"
-    ELSEIF ASC(cI) >= 127 .OR. ASC(cI) <= 31 .OR. cI $ '=&%+'
-      cRet += "%" + HB_StrToHex(cI)
-    ELSE
-      cRet += cI
-    ENDIF
-  NEXT
-RETURN cRet
+   LOCAL cChar, cResult := ""
 
+   FOR EACH cChar in cString
+      DO CASE
+      CASE cChar == "<"
+         cChar = "&lt;"
 
-FUNC UUrlDecode(cString)
-LOCAL nI
-  cString := STRTRAN(cString, "+", " ")
-  nI := 1
-  DO WHILE nI <= LEN(cString)
-    nI := HB_AT("%", cString, nI)
-    IF nI == 0;  EXIT
-    ENDIF
-    IF UPPER(SUBSTR(cString, nI + 1, 1)) $ "0123456789ABCDEF" .AND. ;
-       UPPER(SUBSTR(cString, nI + 2, 1)) $ "0123456789ABCDEF"
-      cString := STUFF(cString, nI, 3, HB_HexToStr(SUBSTR(cString, nI + 1, 2)))
-    ENDIF
-    nI++
-  ENDDO
-RETURN cString
+      CASE cChar == '>'
+         cChar = "&gt;"
+
+      CASE cChar == "&"
+         cChar = "&amp;"
+
+      CASE cChar == '"'
+         cChar = "&quot;"
+
+      CASE cChar == " "
+         cChar = "&nbsp;"
+      ENDCASE
+      cResult += cChar
+   NEXT
+
+   RETURN cResult
 
 
-FUNC ULink(cText, cUrl)
-RETURN '<a href="' + cUrl + '">' + UHtmlEncode(cText) + '</a>'
+FUNCTION UUrlEncode( cString )
 
+   LOCAL nI, cI, cRet := ""
 
-FUNC UUrlCheckSum(cUrl)
-RETURN cUrl + IIF("?" $ cUrl, "&", "?") + "_ucs=" + HB_MD5(session["_unique"] + cUrl + session["_unique"])
-
-
-FUNC UUrlValidate(cUrl)
-LOCAL nI
-  IF cUrl == NIL;  cUrl := server["REQUEST_URI"]
-  ENDIF
-  IF (nI := AT("?_ucs=", cUrl)) == 0
-    nI := AT("&_ucs=", cUrl)
-  ENDIF
-RETURN HB_MD5(session["_unique"] + LEFT(cUrl, nI - 1) + session["_unique"]) == SUBSTR(cUrl, nI + 6)
-
-
-
-
-PROC UProcFiles(cFileName, lIndex )
-LOCAL aDir, aF, nI, cI, tDate, tHDate
-
-
-  IF lIndex == NIL;  lIndex := .F.
-  ENDIF
-
-
-  cFileName := STRTRAN(cFileName, "//", "/")
-
-
-	if right( cFilename, 1 ) == '*' 		
-		cFileName := Substr( cFilename, 1, len( cFilename)-1 )
-	endif
-  
-
-
-
-  // Security
-  IF "/../" $ cFileName
-    USetStatusCode(403)
-    RETURN
-  ENDIF
-
-
-
-  IF HB_FileExists(uOSFileName(cFileName))
-
-    IF HB_HHasKey(server, "HTTP_IF_MODIFIED_SINCE") .AND. ;
-       HttpDateUnformat(server["HTTP_IF_MODIFIED_SINCE"], @tHDate) .AND. ;
-       HB_FGETDATETIME(UOsFileName(cFileName), @tDate) .AND. ;
-       ( tDate <= tHDate )
-      USetStatusCode(304)
-
-    ELSEIF HB_HHasKey(server, "HTTP_IF_UNMODIFIED_SINCE") .AND. ;
-       HttpDateUnformat(server["HTTP_IF_UNMODIFIED_SINCE"], @tHDate) .AND. ;
-       HB_FGETDATETIME(UOsFileName(cFileName), @tDate) .AND. ;
-       ( tDate > tHDate )
-
-      USetStatusCode(412)
-    ELSE
-
-
-      IF (nI := RAT(".", cFileName)) > 0
-	  
-	  
-        SWITCH LOWER(SUBSTR(cFileName, nI + 1))  
-		
-          CASE "prg"
-	  
-			UExecutePrg( cFileName )
-			retu          
-			
-          CASE "htm";   CASE "html"
-		  
-			UExecuteHtml( cFileName )
-			retu 
-			
-          CASE "css";                                 cI := "text/css";  EXIT
-          //CASE "htm";   CASE "html";                  cI := "text/html";  EXIT
-          CASE "txt";   CASE "text";  CASE "asc"
-          CASE "c";     CASE "h";     CASE "cpp"
-          CASE "hpp";   CASE "log";                   cI := "text/plain";  EXIT
-          CASE "rtf";                                 cI := "text/rtf";  EXIT
-          CASE "xml";                                 cI := "text/xml";  EXIT
-          CASE "bmp";                                 cI := "image/bmp";  EXIT
-          CASE "gif";                                 cI := "image/gif";  EXIT
-          CASE "jpg";   CASE "jpe";   CASE "jpeg";    cI := "image/jpeg";  EXIT
-          CASE "png";                                 cI := "image/png";   EXIT
-          CASE "tif";   CASE "tiff";                  cI := "image/tiff";  EXIT
-          CASE "djv";   CASE "djvu";                  cI := "image/vnd.djvu";  EXIT
-          CASE "ico";                                 cI := "image/x-icon";  EXIT
-          CASE "xls";                                 cI := "application/excel";  EXIT
-          CASE "doc";                                 cI := "application/msword";  EXIT
-          CASE "pdf";                                 cI := "application/pdf";  EXIT
-          CASE "ps";    CASE "eps";                   cI := "application/postscript";  EXIT
-          CASE "ppt";                                 cI := "application/powerpoint";  EXIT
-          CASE "bz2";                                 cI := "application/x-bzip2";  EXIT
-          CASE "gz";                                  cI := "application/x-gzip";  EXIT
-          CASE "tgz";                                 cI := "application/x-gtar";  EXIT
-          CASE "js";                                  cI := "application/x-javascript";  EXIT
-          CASE "tar";                                 cI := "application/x-tar";  EXIT
-          CASE "tex";                                 cI := "application/x-tex";  EXIT
-          CASE "zip";                                 cI := "application/zip";  EXIT
-          CASE "midi";                                cI := "audio/midi";  EXIT
-          CASE "mp3";                                 cI := "audio/mpeg";  EXIT
-          CASE "wav";                                 cI := "audio/x-wav";  EXIT
-          CASE "qt";    CASE "mov";                   cI := "video/quicktime";  EXIT
-          CASE "avi";                                 cI := "video/x-msvideo";  EXIT
-          OTHERWISE
-            cI := "application/octet-stream"
-        ENDSWITCH
+   FOR nI := 1 TO Len( cString )
+      cI := SubStr( cString, nI, 1 )
+      IF cI == " "
+         cRet += "+"
+      ELSEIF Asc( cI ) >= 127 .OR. Asc( cI ) <= 31 .OR. cI $ '=&%+'
+         cRet += "%" + hb_StrToHex( cI )
       ELSE
-
-        cI := "application/octet-stream"
+         cRet += cI
       ENDIF
-      UAddHeader("Content-Type", cI)
+   NEXT
 
-      IF HB_FGETDATETIME(UOsFileName(cFileName), @tDate)
-        UAddHeader("Last-Modified", HttpDateFormat(tDate))
+   RETURN cRet
+
+
+FUNCTION UUrlDecode( cString )
+
+   LOCAL nI
+
+   cString := StrTran( cString, "+", " " )
+   nI := 1
+   DO WHILE nI <= Len( cString )
+      nI := hb_At( "%", cString, nI )
+      IF nI == 0;  EXIT
       ENDIF
+      IF Upper( SubStr( cString, nI + 1, 1 ) ) $ "0123456789ABCDEF" .AND. ;
+            Upper( SubStr( cString, nI + 2, 1 ) ) $ "0123456789ABCDEF"
+         cString := Stuff( cString, nI, 3, hb_HexToStr( SubStr( cString, nI + 1, 2 ) ) )
+      ENDIF
+      nI++
+   ENDDO
 
-      UWrite(HB_MEMOREAD(UOsFileName(cFileName)))
-	  	  
-	  
-    ENDIF
+   RETURN cString
 
-  ELSEIF HB_DirExists(UOsFileName(cFileName))
-  
 
-    IF RIGHT(cFileName, 1) != "/"
-       URedirect("http://" + server["HTTP_HOST"] + server["SCRIPT_NAME"] + "/")
-       RETURN
-    ENDIF
+FUNCTION ULink( cText, cUrl )
+   RETURN '<a href="' + cUrl + '">' + UHtmlEncode( cText ) + '</a>'
 
-    IF ASCAN({"index.html", "index.htm"}, ;
-             {|x| IIF(HB_FileExists(UOSFileName(cFileName + X)), (cFileName += X, .T.), .F.)}) > 0
-      UAddHeader("Content-Type", "text/html")
-      UWrite(HB_MEMOREAD(UOsFileName(cFileName)))
+
+FUNCTION UUrlCheckSum( cUrl )
+   RETURN cUrl + iif( "?" $ cUrl, "&", "?" ) + "_ucs=" + hb_MD5( session[ "_unique" ] + cUrl + session[ "_unique" ] )
+
+
+FUNCTION UUrlValidate( cUrl )
+
+   LOCAL nI
+
+   IF cUrl == NIL;  cUrl := server[ "REQUEST_URI" ]
+   ENDIF
+   IF ( nI := At( "?_ucs=", cUrl ) ) == 0
+      nI := At( "&_ucs=", cUrl )
+   ENDIF
+
+   RETURN hb_MD5( session[ "_unique" ] + Left( cUrl, nI - 1 ) + session[ "_unique" ] ) == SubStr( cUrl, nI + 6 )
+
+
+
+
+PROC UProcFiles( cFileName, lIndex )
+
+   LOCAL aDir, aF, nI, cI, tDate, tHDate
+
+   IF lIndex == NIL;  lIndex := .F.
+   ENDIF
+
+
+   cFileName := StrTran( cFileName, "//", "/" )
+
+
+   IF Right( cFilename, 1 ) == '*'
+      cFileName := SubStr( cFilename, 1, Len( cFilename ) - 1 )
+   ENDIF
+
+
+
+
+   // Security
+   IF "/../" $ cFileName
+      USetStatusCode( 403 )
       RETURN
-    ENDIF
-
-    IF ! lIndex
-       USetStatusCode(403)
-       RETURN
-    ENDIF
-
-    UAddHeader("Content-Type", "text/html")
-
-    aDir := DIRECTORY(UOsFileName(cFileName), "D")
+   ENDIF
 
 
 
-    IF HB_HHasKey(get, "s")
-      IF get["s"] == "s"
-        ASORT(aDir,,, {|X,Y| IF(X[5] == "D", IF(Y[5] == "D", X[1] < Y[1], .T.), ;
-                                IF(Y[5] == "D", .F., X[2] < Y[2]))})
-      ELSEIF get["s"] == "m"
-        ASORT(aDir,,, {|X,Y| IF(X[5] == "D", IF(Y[5] == "D", X[1] < Y[1], .T.), ;
-                                IF(Y[5] == "D", .F., DTOS(X[3]) + X[4] < DTOS(Y[3]) + Y[4]))})
+   IF hb_FileExists( uOSFileName( cFileName ) )
+
+      IF hb_HHasKey( server, "HTTP_IF_MODIFIED_SINCE" ) .AND. ;
+            HttpDateUnformat( server[ "HTTP_IF_MODIFIED_SINCE" ], @tHDate ) .AND. ;
+            hb_FGetDateTime( UOsFileName( cFileName ), @tDate ) .AND. ;
+            ( tDate <= tHDate )
+         USetStatusCode( 304 )
+
+      ELSEIF hb_HHasKey( server, "HTTP_IF_UNMODIFIED_SINCE" ) .AND. ;
+            HttpDateUnformat( server[ "HTTP_IF_UNMODIFIED_SINCE" ], @tHDate ) .AND. ;
+            hb_FGetDateTime( UOsFileName( cFileName ), @tDate ) .AND. ;
+            ( tDate > tHDate )
+
+         USetStatusCode( 412 )
       ELSE
-        ASORT(aDir,,, {|X,Y| IF(X[5] == "D", IF(Y[5] == "D", X[1] < Y[1], .T.), ;
-                                IF(Y[5] == "D", .F., X[1] < Y[1]))})
-      ENDIF
-    ELSE
-      ASORT(aDir,,, {|X,Y| IF(X[5] == "D", IF(Y[5] == "D", X[1] < Y[1], .T.), ;
-                              IF(Y[5] == "D", .F., X[1] < Y[1]))})
-    ENDIF
 
-    UWrite('<html><body><h1>Index of ' + server["SCRIPT_NAME"] + '</h1><pre>      ')
-    UWrite('<a href="?s=n">Name</a>                                                  ')
-    UWrite('<a href="?s=m">Modified</a>             ')
-    UWrite('<a href="?s=s">Size</a>' + CR_LF + '<hr>')
-    FOR EACH aF IN aDir
-      IF LEFT(aF[1], 1) == "."
-      ELSEIF "D" $ aF[5]
-        UWrite('[DIR] <a href="' + aF[1] + '/">'+ aF[1] + '</a>' + SPACE(50 - LEN(aF[1])) + ;
-               DTOC(aF[3]) + ' ' + aF[4] + CR_LF)
+
+         IF ( nI := RAt( ".", cFileName ) ) > 0
+
+
+            SWITCH Lower( SubStr( cFileName, nI + 1 ) )
+
+            CASE "prg"
+
+               UExecutePrg( cFileName )
+               RETU
+
+            CASE "htm";   CASE "html"
+
+               UExecuteHtml( cFileName )
+               RETU
+
+            CASE "css";                                 cI := "text/css";  EXIT
+               // CASE "htm";   CASE "html";                  cI := "text/html";  EXIT
+            CASE "txt";   CASE "text";  CASE "asc"
+            CASE "c";     CASE "h";     CASE "cpp"
+            CASE "hpp";   CASE "log";                   cI := "text/plain";  EXIT
+            CASE "rtf";                                 cI := "text/rtf";  EXIT
+            CASE "xml";                                 cI := "text/xml";  EXIT
+            CASE "bmp";                                 cI := "image/bmp";  EXIT
+            CASE "gif";                                 cI := "image/gif";  EXIT
+            CASE "jpg";   CASE "jpe";   CASE "jpeg";    cI := "image/jpeg";  EXIT
+            CASE "png";                                 cI := "image/png";   EXIT
+            CASE "tif";   CASE "tiff";                  cI := "image/tiff";  EXIT
+            CASE "djv";   CASE "djvu";                  cI := "image/vnd.djvu";  EXIT
+            CASE "ico";                                 cI := "image/x-icon";  EXIT
+            CASE "xls";                                 cI := "application/excel";  EXIT
+            CASE "doc";                                 cI := "application/msword";  EXIT
+            CASE "pdf";                                 cI := "application/pdf";  EXIT
+            CASE "ps";    CASE "eps";                   cI := "application/postscript";  EXIT
+            CASE "ppt";                                 cI := "application/powerpoint";  EXIT
+            CASE "bz2";                                 cI := "application/x-bzip2";  EXIT
+            CASE "gz";                                  cI := "application/x-gzip";  EXIT
+            CASE "tgz";                                 cI := "application/x-gtar";  EXIT
+            CASE "js";                                  cI := "application/x-javascript";  EXIT
+            CASE "tar";                                 cI := "application/x-tar";  EXIT
+            CASE "tex";                                 cI := "application/x-tex";  EXIT
+            CASE "zip";                                 cI := "application/zip";  EXIT
+            CASE "midi";                                cI := "audio/midi";  EXIT
+            CASE "mp3";                                 cI := "audio/mpeg";  EXIT
+            CASE "wav";                                 cI := "audio/x-wav";  EXIT
+            CASE "qt";    CASE "mov";                   cI := "video/quicktime";  EXIT
+            CASE "avi";                                 cI := "video/x-msvideo";  EXIT
+            OTHERWISE
+               cI := "application/octet-stream"
+            ENDSWITCH
+         ELSE
+
+            cI := "application/octet-stream"
+         ENDIF
+         UAddHeader( "Content-Type", cI )
+
+         IF hb_FGetDateTime( UOsFileName( cFileName ), @tDate )
+            UAddHeader( "Last-Modified", HttpDateFormat( tDate ) )
+         ENDIF
+
+         UWrite( hb_MemoRead( UOsFileName( cFileName ) ) )
+
+
+      ENDIF
+
+   ELSEIF hb_DirExists( UOsFileName( cFileName ) )
+
+
+      IF Right( cFileName, 1 ) != "/"
+         URedirect( "http://" + server[ "HTTP_HOST" ] + server[ "SCRIPT_NAME" ] + "/" )
+         RETURN
+      ENDIF
+
+      IF AScan( { "index.html", "index.htm" }, ;
+            {| x | iif( hb_FileExists( UOSFileName( cFileName + X ) ), ( cFileName += X, .T. ), .F. ) } ) > 0
+         UAddHeader( "Content-Type", "text/html" )
+         UWrite( hb_MemoRead( UOsFileName( cFileName ) ) )
+         RETURN
+      ENDIF
+
+      IF ! lIndex
+         USetStatusCode( 403 )
+         RETURN
+      ENDIF
+
+      UAddHeader( "Content-Type", "text/html" )
+
+      aDir := Directory( UOsFileName( cFileName ), "D" )
+
+
+
+      IF hb_HHasKey( GET, "s" )
+         IF GET[ "s" ] == "s"
+            ASort( aDir,,, {| X, Y | IF( X[ 5 ] == "D", IF( Y[ 5 ] == "D", X[ 1 ] < Y[ 1 ], .T. ), ;
+               IF( Y[ 5 ] == "D", .F., X[ 2 ] < Y[ 2 ] ) ) } )
+         ELSEIF GET[ "s" ] == "m"
+            ASort( aDir,,, {| X, Y | IF( X[ 5 ] == "D", IF( Y[ 5 ] == "D", X[ 1 ] < Y[ 1 ], .T. ), ;
+               IF( Y[ 5 ] == "D", .F., DToS( X[ 3 ] ) + X[ 4 ] < DToS( Y[ 3 ] ) + Y[ 4 ] ) ) } )
+         ELSE
+            ASort( aDir,,, {| X, Y | IF( X[ 5 ] == "D", IF( Y[ 5 ] == "D", X[ 1 ] < Y[ 1 ], .T. ), ;
+               IF( Y[ 5 ] == "D", .F., X[ 1 ] < Y[ 1 ] ) ) } )
+         ENDIF
       ELSE
-        UWrite('      <a href="' + aF[1] + '">'+ aF[1] + '</a>' + SPACE(50 - LEN(aF[1])) + ;
-               DTOC(aF[3]) + ' ' + aF[4] + STR(aF[2], 12) + CR_LF)
+         ASort( aDir,,, {| X, Y | IF( X[ 5 ] == "D", IF( Y[ 5 ] == "D", X[ 1 ] < Y[ 1 ], .T. ), ;
+            IF( Y[ 5 ] == "D", .F., X[ 1 ] < Y[ 1 ] ) ) } )
       ENDIF
-    NEXT
-    UWrite("<hr></pre></body></html>")
-  ELSE
 
-    USetStatusCode(404)
-  ENDIF
+      UWrite( '<html><body><h1>Index of ' + server[ "SCRIPT_NAME" ] + '</h1><pre>      ' )
+      UWrite( '<a href="?s=n">Name</a>                                                  ' )
+      UWrite( '<a href="?s=m">Modified</a>             ' )
+      UWrite( '<a href="?s=s">Size</a>' + CR_LF + '<hr>' )
+      FOR EACH aF IN aDir
+         IF Left( aF[ 1 ], 1 ) == "."
+         ELSEIF "D" $ aF[ 5 ]
+            UWrite( '[DIR] <a href="' + aF[ 1 ] + '/">' + aF[ 1 ] + '</a>' + Space( 50 - Len( aF[ 1 ] ) ) + ;
+               DToC( aF[ 3 ] ) + ' ' + aF[ 4 ] + CR_LF )
+         ELSE
+            UWrite( '      <a href="' + aF[ 1 ] + '">' + aF[ 1 ] + '</a>' + Space( 50 - Len( aF[ 1 ] ) ) + ;
+               DToC( aF[ 3 ] ) + ' ' + aF[ 4 ] + Str( aF[ 2 ], 12 ) + CR_LF )
+         ENDIF
+      NEXT
+      UWrite( "<hr></pre></body></html>" )
+   ELSE
 
-RETURN
+      USetStatusCode( 404 )
+   ENDIF
 
-//	Difference between UExecuteHtml and ULoadHtml is:
-//	UExecuteHtml cFileName is with all path
-//	ULoadHtml cFileName is only filename and path is UGetServer():cPathHtml
+   RETURN
 
-function UExecuteHtml( cFileName )
+// Difference between UExecuteHtml and ULoadHtml is:
+// UExecuteHtml cFileName is with all path
+// ULoadHtml cFileName is only filename and path is UGetServer():cPathHtml
 
-	local cCode 
-	
-	if !file( cFileName )
-		retu nil
-	endif
-	
-	cCode :=  hb_memoread( UOsFileName( cFileName ) ) 
+FUNCTION UExecuteHtml( cFileName )
 
-	UReplaceBlocks( @cCode, "{{", "}}", nil )
+   LOCAL cCode
 
-	cFilePrg := hb_FNameNameExt(cFileName)
-	
-	UInlinePRG( @cCode )
-	
-	UWrite( cCode )
+   IF !File( cFileName )
+      RETU NIL
+   ENDIF
 
-retu nil
+   cCode :=  hb_MemoRead( UOsFileName( cFileName ) )
 
-function UExecutePrg( cFileName, lWrite, cCode, cCodePP )
-	
-	local oHrb, pSym
-	local cResult := ''
-	
-	
-	hb_default( @lWrite, .t. )
-	hb_default( @cCode, '' )
-	hb_default( @cCodePP, '' )
-	
+   UReplaceBlocks( @cCode, "{{", "}}", NIL )
 
-	if !file( cFileName )
-		retu nil
-	endif
-	
-	cCode :=  hb_memoread( UOsFileName( cFileName ) ) 		
-	
-	oHrb := UCompile( cCode, @cCodePP )
-	
-	
-	IF ! Empty( oHrb )
-   
-		//mh_startmutex()
+   cFilePrg := hb_FNameNameExt( cFileName )
 
-		//pSym := hb_hrbLoad( HB_HRB_BIND_OVERLOAD, oHrb )	  
-		pSym := hb_hrbLoad( 0x1, oHrb )	  		//	HB_HRB_BIND_LOCAL 
+   UInlinePRG( @cCode )
 
-		//mh_endmutex()
+   UWrite( cCode )
 
-		cResult := hb_hrbDo( pSym )
+   RETU NIL
 
-   ENDIF		
-	
-	if lWrite
-		UWrite( cResult )
-	endif
+FUNCTION UExecutePrg( cFileName, lWrite, cCode, cCodePP )
 
-retu if( lWrite, nil, cResult )
+   LOCAL oHrb, pSym
+   LOCAL cResult := ''
 
+   hb_default( @lWrite, .T. )
+   hb_default( @cCode, '' )
+   hb_default( @cCodePP, '' )
+
+
+   IF !File( cFileName )
+      RETU NIL
+   ENDIF
+
+   cCode :=  hb_MemoRead( UOsFileName( cFileName ) )
+
+   oHrb := UCompile( cCode, @cCodePP )
+
+
+   IF ! Empty( oHrb )
+
+// mh_startmutex()
+
+// pSym := hb_hrbLoad( HB_HRB_BIND_OVERLOAD, oHrb )
+      pSym := hb_hrbLoad( 0x1, oHrb )     // HB_HRB_BIND_LOCAL
+
+// mh_endmutex()
+
+      cResult := hb_hrbDo( pSym )
+
+   ENDIF
+
+   IF lWrite
+      UWrite( cResult )
+   ENDIF
+
+   RETU if( lWrite, NIL, cResult )
 
 PROC UProcInfo()
-LOCAL cI
-  UWrite('<h1>Info</h1>')
 
-  UWrite('<h2>Platform</h2>')
-  UWrite('<table border=1 cellspacing=0>')
-  UWrite('<tr><td>OS</td><td>' + UHtmlEncode(OS()) + '</td></tr>')
-  UWrite('<tr><td>Harbour</td><td>' + UHtmlEncode(VERSION()) + '</td></tr>')
-  UWrite('<tr><td>Build date</td><td>' + UHtmlEncode(HB_BUILDDATE()) + '</td></tr>')
-  UWrite('<tr><td>Compiler</td><td>' + UHtmlEncode(HB_COMPILER()) + '</td></tr>')
-  UWrite('</table>')
+   LOCAL cI
 
-  UWrite('<h2>Capabilities</h2>')
-  UWrite('<table border=1 cellspacing=0>')
-  cI := ""
-  AEVAL(RDDLIST(), {|X| cI += IIF(EMPTY(cI), "", ", ") + X})
-  UWrite('<tr><td>RDD</td><td>' + UHtmlEncode(cI) + '</td></tr>')
-  UWrite('</table>')
+   UWrite( '<h1>Info</h1>' )
 
-  UWrite('<h2>Variables</h2>')
+   UWrite( '<h2>Platform</h2>' )
+   UWrite( '<table border=1 cellspacing=0>' )
+   UWrite( '<tr><td>OS</td><td>' + UHtmlEncode( OS() ) + '</td></tr>' )
+   UWrite( '<tr><td>Harbour</td><td>' + UHtmlEncode( Version() ) + '</td></tr>' )
+   UWrite( '<tr><td>Build date</td><td>' + UHtmlEncode( hb_BuildDate() ) + '</td></tr>' )
+   UWrite( '<tr><td>Compiler</td><td>' + UHtmlEncode( hb_Compiler() ) + '</td></tr>' )
+   UWrite( '</table>' )
 
-  UWrite('<h3>server</h3>')
-  UWrite('<table border=1 cellspacing=0>')
-  AEVAL(ASORT(HB_HKeys(server)), {|X| UWrite('<tr><td>' + X + '</td><td>' + UHtmlEncode(HB_CStr(server[X])) + '</td></tr>')})
-  UWrite('</table>')
+   UWrite( '<h2>Capabilities</h2>' )
+   UWrite( '<table border=1 cellspacing=0>' )
+   cI := ""
+   AEval( rddList(), {| X | cI += iif( Empty( cI ), "", ", " ) + X } )
+   UWrite( '<tr><td>RDD</td><td>' + UHtmlEncode( cI ) + '</td></tr>' )
+   UWrite( '</table>' )
 
-  IF !EMPTY(get)
-    UWrite('<h3>get</h3>')
-    UWrite('<table border=1 cellspacing=0>')
-    AEVAL(ASORT(HB_HKeys(get)), {|X| UWrite('<tr><td>' + X + '</td><td>' + UHtmlEncode(HB_CStr(get[X])) + '</td></tr>')})
-    UWrite('</table>')
-  ENDIF
+   UWrite( '<h2>Variables</h2>' )
 
-  IF !EMPTY(post)
-    UWrite('<h3>post</h3>')
-    UWrite('<table border=1 cellspacing=0>')
-    AEVAL(ASORT(HB_HKeys(post)), {|X| UWrite('<tr><td>' + X + '</td><td>' + UHtmlEncode(HB_CStr(post[X])) + '</td></tr>')})
-    UWrite('</table>')
-  ENDIF
-RETURN
+   UWrite( '<h3>server</h3>' )
+   UWrite( '<table border=1 cellspacing=0>' )
+   AEval( ASort( hb_HKeys( server ) ), {| X | UWrite( '<tr><td>' + X + '</td><td>' + UHtmlEncode( hb_CStr( server[ X ] ) ) + '</td></tr>' ) } )
+   UWrite( '</table>' )
+
+   IF !Empty( get )
+      UWrite( '<h3>get</h3>' )
+      UWrite( '<table border=1 cellspacing=0>' )
+      AEval( ASort( hb_HKeys( get ) ), {| X | UWrite( '<tr><td>' + X + '</td><td>' + UHtmlEncode( hb_CStr( GET[ X ] ) ) + '</td></tr>' ) } )
+      UWrite( '</table>' )
+   ENDIF
+
+   IF !Empty( post )
+      UWrite( '<h3>post</h3>' )
+      UWrite( '<table border=1 cellspacing=0>' )
+      AEval( ASort( hb_HKeys( post ) ), {| X | UWrite( '<tr><td>' + X + '</td><td>' + UHtmlEncode( hb_CStr( post[ X ] ) ) + '</td></tr>' ) } )
+      UWrite( '</table>' )
+   ENDIF
+
+   RETURN
 
 
-//----------------------------------------------------------------------------//
+// ----------------------------------------------------------------------------//
 /*
-	nSecs = -1 Delete cookie
-	nSecs =  0 Cookie live during session browse
-	nSecs >  0 Seconds of cookie
+ nSecs = -1 Delete cookie
+ nSecs =  0 Cookie live during session browse
+ nSecs >  0 Seconds of cookie
 */
 
 
-function USetCookie( cKey, cValue, nSecs, cPath, cDomain, lHttps, lOnlyHttp, cSameSite )
+FUNCTION USetCookie( cKey, cValue, nSecs, cPath, cDomain, lHttps, lOnlyHttp, cSameSite )
 
-	local cCookie := ''
-	
+   LOCAL cCookie := ''
+
    hb_default( @cKey, 'SESSID' )
    hb_default( @cValue, '' )
    hb_default( @nSecs, 0 )   // Session will expire in Seconds 60 * 60 = 3600 1hour
    hb_default( @cPath, '/' )
-   hb_default( @cDomain	, '' )
+   hb_default( @cDomain, '' )
    hb_default( @lHttps, .F. )
    hb_default( @lOnlyHttp, .T. )
-   hb_default( @cSameSite, 'Lax' )		//	none, Strict
-   
-   
+   hb_default( @cSameSite, 'Lax' )  // none, Strict
+
+
    // we build the cookie
    cCookie += cKey + '=' + cValue + ';'
-   
-   do case
-		case nSecs == -1    
-			cCookie += 'expires=' + 'Thu, 01 Jan 1970 00:00:00 GMT;'
-		case nSecs == 0
-			//cCookie -> No existe tiempo
-		otherwise
-			//cCookie += 'expires=' + 'Thu, 10 Oct 2023 13:00:00 GMT;'
-			cCookie += 'expires=' + UCookieExpires( nSecs ) + ' GMT;'
-	endcase		         	
-   
-	cCookie += 'path=' + cPath + ';'
-   
-	if ! Empty( cDomain )
+
+   DO CASE
+   CASE nSecs == -1
+      cCookie += 'expires=' + 'Thu, 01 Jan 1970 00:00:00 GMT;'
+   CASE nSecs == 0
+// cCookie -> No existe tiempo
+   OTHERWISE
+// cCookie += 'expires=' + 'Thu, 10 Oct 2023 13:00:00 GMT;'
+      cCookie += 'expires=' + UCookieExpires( nSecs ) + ' GMT;'
+   ENDCASE
+
+   cCookie += 'path=' + cPath + ';'
+
+   IF ! Empty( cDomain )
       cCookie += 'domain=' + cDomain + ';'
-	endif
-	
-	if lOnlyHttp
-		cCookie += 'HttpOnly;'
-	endif
-	
-    cCookie += 'SameSite=' + cSameSite + ';'
+   ENDIF
 
-	
-	if UServer()[ 'HTTPS' ]
-		cCookie += 'Secure'
-	endif
-	
-	//cCookie += 'Secure'
-	
-	
-	UAddHeader("Set-Cookie", cCookie )		
-	
-retu nil
+   IF lOnlyHttp
+      cCookie += 'HttpOnly;'
+   ENDIF
 
-function UGetCookie( cKey ) 
-
-	LOCAL cSID := ''
-	
-	hb_default( @cKey, 'SESSID' )
-
-	cSID := HB_HGetDef( cookie, cKey, ''  ) 		
+   cCookie += 'SameSite=' + cSameSite + ';'
 
 
-retu cSID
+   IF UServer()[ 'HTTPS' ]
+      cCookie += 'Secure'
+   ENDIF
 
-//----------------------------------------------------------------//
+// cCookie += 'Secure'
 
-function UGetIP() 
 
-retu if( valtype( server ) == 'H', server["REMOTE_ADDR"], '' )
+   UAddHeader( "Set-Cookie", cCookie )
 
-//----------------------------------------------------------------//
+   RETU NIL
+
+FUNCTION UGetCookie( cKey )
+
+   LOCAL cSID := ''
+
+   hb_default( @cKey, 'SESSID' )
+
+   cSID := hb_HGetDef( cookie, cKey, ''  )
+
+
+   RETU cSID
+
+// ----------------------------------------------------------------//
+
+FUNCTION UGetIP()
+
+   RETU if( ValType( server ) == 'H', server[ "REMOTE_ADDR" ], '' )
+
+// ----------------------------------------------------------------//
 // CookieExpire( nSecs ) builds the time format for the cookie
 // Using this model: 'Sun, 09 Jun 2019 16:14:00'
 
+FUNCTION UCookieExpires( nSecs )
 
-function UCookieExpires( nSecs )
+   LOCAL tNow := hb_DateTime()
+   LOCAL tExpire   // TimeStampp
+   LOCAL cExpire   // TimeStamp to String
 
-   local tNow := hb_datetime()	
-   local tExpire   // TimeStampp 
-   local cExpire   // TimeStamp to String
-	
    hb_default( @nSecs, 60 ) // 60 seconds for this test
-   
-   tExpire = hb_ntot( ( hb_tton( tNow ) * 86400 - hb_utcoffset() + nSecs ) / 86400 )
 
-   cExpire = cdow( tExpire ) + ', ' 
-	     cExpire += AllTrim( Str( Day( hb_TtoD( tExpire ) ) ) ) + ;
-	     ' ' + cMonth( tExpire ) + ' ' + AllTrim( Str( Year( hb_TtoD( tExpire ) ) ) ) + ' ' 
+   tExpire = hb_NToT( ( hb_TToN( tNow ) * 86400 - hb_UTCOffset() + nSecs ) / 86400 )
+
+   cExpire = CDoW( tExpire ) + ', '
+   cExpire += AllTrim( Str( Day( hb_TToD( tExpire ) ) ) ) + ;
+      ' ' + CMonth( tExpire ) + ' ' + AllTrim( Str( Year( hb_TToD( tExpire ) ) ) ) + ' '
    cExpire += AllTrim( Str( hb_Hour( tExpire ) ) ) + ':' + AllTrim( Str( hb_Minute( tExpire ) ) ) + ;
-              ':' + AllTrim( Str( hb_Sec( tExpire ) ) )
+      ':' + AllTrim( Str( hb_Sec( tExpire ) ) )
 
-return cExpire
+   RETURN cExpire
 
 
-//----------------------------------------------------------------------------//
+// ----------------------------------------------------------------------------//
 
-function UMsgError( cMsg )
-	
-	local cHtml := '<h2 class="uerrortitletop" >=> System Error</h2><hr>'			
+FUNCTION UMsgError( cMsg )
 
-retu cMsg
+   LOCAL cHtml := '<h2 class="uerrortitletop" >=> System Error</h2><hr>'
 
-//----------------------------------------------------------------------------//
+   RETU cMsg
 
-function ULoadPrg( hSrv, cPrg )
-	
-	local cFile 	:= hSrv[ 'pathhtml' ] + '/'  + cPrg
-	local aRequest	:= {=>}
-	local cResponse	:= ''
-	local oError
-	local lError 	:= .f.
-	local cInfoCode := ''
-	local cError := ''
-	local cCode := ''
-	local cCodePP := ''
-	local cArgs
-	
-	
-	cFileHtml := cPrg
+// ----------------------------------------------------------------------------//
 
-	if file( cFile )	
-	
-		BEGIN SEQUENCE WITH {|oErr| oError := oErr, Break( oErr ) }
-    	
-			cResponse := UExecutePrg( cFile, .f., @cCode, @cCodePP )	
+FUNCTION ULoadPrg( hSrv, cPrg )
 
-		RECOVER USING oError			
-		
-			lError := .t.
-			
-			/*
-			
-				cInfoCode 	:= UGetInfoCode( oError, cCode ,cCodePP )			
-				
-				_d( 'INFOCODE->', cInfoCode )
-				_d( 'CODE->', cCode )
-				_d( 'CODEPP->', cCodePP )
-				_d( oError )
-			*/
-			
-			
-			cError      := '<b>File: </b>' + hb_FNameNameExt( cPrg )
-			cError      += '<br><b>Error: </b>' + oError:description
-			
-			IF !EMPTY(oError:operation)
-				cError += '<br><b>Operation: </b>' + oError:operation
-			ENDIF
+   LOCAL cFile  := hSrv[ 'pathhtml' ] + '/'  + cPrg
+   LOCAL aRequest := { => }
+   LOCAL cResponse := ''
+   LOCAL oError
+   LOCAL lError  := .F.
+   LOCAL cInfoCode := ''
+   LOCAL cError := ''
+   LOCAL cCode := ''
+   LOCAL cCodePP := ''
+   LOCAL cArgs
 
-			cArgs := ''
-			
-			IF VALTYPE(oError:args) == "A"
-				AEVAL(oError:args, {|X, Y| cArgs += ltrim(STR(Y)) + ": " + Alltrim(HB_CStr(X)) + '<br>'})
-				cError += '<br><b>Arguments: </b><br>' +  cArgs 
-			ENDIF													
-		
-		END SEQUENCE
-		
-		if ! lError 
-		
-			aRequest[ 'success' ] 	:= .t.		
-			aRequest[ 'html' ] 	:= cResponse 
-			aRequest[ 'msg' ] 		:= ''
-		
-		else 
-		
-			aRequest[ 'success' ] 	:= .f.		
-			aRequest[ 'html' ] 	:= ''
-			aRequest[ 'msg' ] 		:= cError
-		
-		endif
-		
-	else 
-	
-		aRequest[ 'success' ] 	:= .f.
-		aRequest[ 'html' ] 	:= ''
-		aRequest[ 'msg' ] 		:= "Don't exist prg file => " + cPrg
-		
-		
-	endif 
-	
-	cFileHtml := ''
+   cFileHtml := cPrg
 
-	//	retu cHtml				
-	
-retu aRequest
+   IF File( cFile )
 
-//----------------------------------------------------------------------------//
+      BEGIN SEQUENCE WITH {| oErr | oError := oErr, Break( oErr ) }
 
-function ULoadPage( hSrv, cHtml )
-	
-	local cFile 	:= hSrv[ 'pathhtml' ] + '/'  + cHtml
-	local aRequest	:= {=>}
-	local cCode 	:= ''
-	
-	
-	cFileHtml := cHtml 
+         cResponse := UExecutePrg( cFile, .F., @cCode, @cCodePP )
 
-	if file( cFile )	
-	
-		cCode := hb_memoread( cFile ) 
-	
-		UReplaceBlocks( @cCode, "{{", "}}" )						
-				
-		cFilePrg := hb_FNameNameExt(cFile)
-	
-		UInlinePrg( @cCode )				
+      RECOVER USING oError
 
-		aRequest[ 'success' ] 	:= .t.		
-		aRequest[ 'html' ] 	:= cCode 
-		aRequest[ 'msg' ] 		:= ''
-		
-	else 
-	
-		aRequest[ 'success' ] 	:= .f.
-		aRequest[ 'html' ] 	:= ''
-		aRequest[ 'msg' ] 		:= "Don't exist html file => " + cHtml
-		
-		
-	endif 
-	
-	cFileHtml := ''
+         lError := .T.
+
+   /*
+
+    cInfoCode  := UGetInfoCode( oError, cCode ,cCodePP )
+
+    _d( 'INFOCODE->', cInfoCode )
+    _d( 'CODE->', cCode )
+    _d( 'CODEPP->', cCodePP )
+    _d( oError )
+   */
+
+
+         cError      := '<b>File: </b>' + hb_FNameNameExt( cPrg )
+         cError      += '<br><b>Error: </b>' + oError:description
+
+         IF !Empty( oError:operation )
+            cError += '<br><b>Operation: </b>' + oError:operation
+         ENDIF
+
+         cArgs := ''
+
+         IF ValType( oError:args ) == "A"
+            AEval( oError:args, {| X, Y | cArgs += LTrim( Str( Y ) ) + ": " + AllTrim( hb_CStr( X ) ) + '<br>' } )
+            cError += '<br><b>Arguments: </b><br>' +  cArgs
+         ENDIF
+
+      END SEQUENCE
+
+      IF ! lError
+
+         aRequest[ 'success' ]  := .T.
+         aRequest[ 'html' ]  := cResponse
+         aRequest[ 'msg' ]   := ''
+
+      ELSE
+
+         aRequest[ 'success' ]  := .F.
+         aRequest[ 'html' ]  := ''
+         aRequest[ 'msg' ]   := cError
+
+      ENDIF
+
+   ELSE
+
+      aRequest[ 'success' ]  := .F.
+      aRequest[ 'html' ]  := ''
+      aRequest[ 'msg' ]   := "Don't exist prg file => " + cPrg
+
+
+   ENDIF
+
+   cFileHtml := ''
+
+// retu cHtml
+
+   RETU aRequest
+
+// ----------------------------------------------------------------------------//
+
+FUNCTION ULoadPage( hSrv, cHtml )
+
+   LOCAL cFile  := hSrv[ 'pathhtml' ] + '/'  + cHtml
+   LOCAL aRequest := { => }
+   LOCAL cCode  := ''
+
+   cFileHtml := cHtml
+
+   IF File( cFile )
+
+      cCode := hb_MemoRead( cFile )
+
+      UReplaceBlocks( @cCode, "{{", "}}" )
+
+      cFilePrg := hb_FNameNameExt( cFile )
+
+      UInlinePrg( @cCode )
+
+      aRequest[ 'success' ]  := .T.
+      aRequest[ 'html' ]  := cCode
+      aRequest[ 'msg' ]   := ''
+
+   ELSE
+
+      aRequest[ 'success' ]  := .F.
+      aRequest[ 'html' ]  := ''
+      aRequest[ 'msg' ]   := "Don't exist html file => " + cHtml
+
+
+   ENDIF
+
+   cFileHtml := ''
 
 
 
-	//	retu cHtml				
-	
-retu aRequest
+// retu cHtml
 
-//----------------------------------------------------------------------------//
+   RETU aRequest
+
+// ----------------------------------------------------------------------------//
+
+FUNCTION ULoadHtml( cFileHtml, ... )
+
+   LOCAL cFile
+   LOCAL aRequest := { => }
+   LOCAL cCode  := ''
+
+// hb_default( @lPathRelative, .T. )
+
+// if lPathRelative
+   cFile  := UGetServer():cPathHtml + '\'  + cFileHtml
+// else
+// cFile  := cFileHtml
+// endif
 
 
-function ULoadHtml( cFileHtml, ... )
-	
-	local cFile 	
-	local aRequest	:= {=>}
-	local cCode 	:= ''
-	
-	//hb_default( @lPathRelative, .T. )
-	
-	//if lPathRelative 	
-		cFile 	:= UGetServer():cPathHtml + '\'  + cFileHtml
-	//else
-	//	cFile 	:= cFileHtml 
-	//endif
-	
+   IF File( cFile )
 
-	if file( cFile )
+      UDefError()
 
-		UDefError()
-	
-		cCode := hb_memoread( cFile ) 
-	
-		UReplaceBlocks( @cCode, "{{", "}}", nil, ... )						
-				
-		cFilePrg := hb_FNameNameExt(cFile)
-		
-		UInlinePrg( @cCode,nil, ... )
-	
-		
-		if !empty( UGetError() )
+      cCode := hb_MemoRead( cFile )
 
-			cCode := ''
-	
-		endif
-			
-		
-	else 	
-		
-		UDo_Error( 'ULoadHtml() File not found ' + cFileHtml, nil, 100 )
+      UReplaceBlocks( @cCode, "{{", "}}", NIL, ... )
 
-	endif
-	
-retu cCode 
+      cFilePrg := hb_FNameNameExt( cFile )
 
-//----------------------------------------------------------------------------//
+      UInlinePrg( @cCode, NIL, ... )
 
-FUNCTION UDefError(u) 
-	hb_default( @u, '' )
-	cProcError := u
-retu nil 
 
-FUNCTION UGetError() ; retu cProcError	
+      IF !Empty( UGetError() )
 
-//----------------------------------------------------------------------------//
+         cCode := ''
 
-FUNCTION UGetCfg()	;	retu hCfg
+      ENDIF
 
-//----------------------------------------------------------------------------//
-//--- ERROR SYSTEM 
-//----------------------------------------------------------------------------//
+
+   ELSE
+
+      UDo_Error( 'ULoadHtml() File not found ' + cFileHtml, NIL, 100 )
+
+   ENDIF
+
+   RETU cCode
+
+// ----------------------------------------------------------------------------//
+
+FUNCTION UDefError( u )
+
+   hb_default( @u, '' )
+   cProcError := u
+   RETU NIL
+
+FUNCTION UGetError() ; RETU cProcError
+
+// ----------------------------------------------------------------------------//
+
+FUNCTION UGetCfg() ; RETU hCfg
+
+// ----------------------------------------------------------------------------//
+// --- ERROR SYSTEM
+// ----------------------------------------------------------------------------//
+
 FUNCTION UDo_ErrorMsg( cDescription, cSubsystem )
-	UDo_Error( cDescription, cSubsystem, 666 )
-RETU NIL
+
+   UDo_Error( cDescription, cSubsystem, 666 )
+   RETU NIL
 
 FUNCTION UDo_Error( cDescription, cSubsystem, nSubCode )
 
@@ -2859,99 +2925,101 @@ FUNCTION UDo_Error( cDescription, cSubsystem, nSubCode )
    hb_default( @cSubsystem, "httpd2" )
    hb_default( @nSubCode, 0 )
 
-   oError:Subsystem   		:= cSubsystem
-   oError:SubCode 			:= nSubCode
-   oError:Severity    		:= 2 // ES_ERROR
-   oError:Description 	:= cDescription
+   oError:Subsystem     := cSubsystem
+   oError:SubCode    := nSubCode
+   oError:Severity      := 2 // ES_ERROR
+   oError:Description  := cDescription
    Eval( ErrorBlock(), oError )
 
-RETURN NIL
+   RETURN NIL
 
-//----------------------------------------------------------------------------//
-
-
-
-FUNC UErrorHandler(oErr, oServer, cError )
-  
-  cError := ''
+// ----------------------------------------------------------------------------//
 
 
- 
-  IF     oErr:genCode == EG_ZERODIV;  RETURN 0
-  ELSEIF oErr:genCode == EG_LOCK;     RETURN .T.
-  ELSEIF (oErr:genCode == EG_OPEN .AND. oErr:osCode == 32 .OR. ;
-          oErr:genCode == EG_APPENDLOCK) .AND. oErr:canDefault
-    NETERR(.T.)
-    RETURN .F.
-  ENDIF
-		cError := UErrorWeb()			
 
-		cError += UErrorGetDescription( oErr )								
+FUNCTION UErrorHandler( oErr, oServer, cError )
 
-		cError += UErrorGetSys()	
-
- 
-  oServer:LogError(UGetErrorLog(oErr))
-
-  
-  if valtype( oServer:aConfig[ 'ErrorBloc' ] ) == 'B'
+   cError := ''
 
 
-		eval( oServer:aConfig[ 'ErrorBloc' ], oErr, UGetErrorLog(oErr) ) 
 
-  ENDIF
+   IF     oErr:genCode == EG_ZERODIV;  RETURN 0
+   ELSEIF oErr:genCode == EG_LOCK;     RETURN .T.
+   ELSEIF ( oErr:genCode == EG_OPEN .AND. oErr:osCode == 32 .OR. ;
+         oErr:genCode == EG_APPENDLOCK ) .AND. oErr:canDefault
+      NetErr( .T. )
+      RETURN .F.
+   ENDIF
+   cError := UErrorWeb()
 
-  IF oErr != NIL  // Dummy check to avoid unreachable code warning for RETURN NIL
+   cError += UErrorGetDescription( oErr )
 
-    BREAK(oErr)
-
-  ENDIF
-
-RETURN ''
+   cError += UErrorGetSys()
 
 
-//----------------------------------------------------------------------------//
+   oServer:LogError( UGetErrorLog( oErr ) )
 
-STATIC FUNC UGetErrorLog(oErr, lWeb )
-LOCAL cRet, nI, cNewLine
-//LOCAL ci, apar,nj, xi
 
-	hb_default( @cNewLine, HB_OSNewLine() )
-	hb_default( @lWeb, .F. )
-	
-	cNewLine := if( lWeb, '<br>', HB_OSNewLine())
+   IF ValType( oServer:aConfig[ 'ErrorBloc' ] ) == 'B'
 
-	
-  cRet := "ERRORLOG =========================================" + cNewLine
-  cRet += "Error: " + oErr:subsystem + "/" + ErrDescCode(oErr:genCode) + "(" + LTRIM(STR(oErr:genCode)) + ") " + ;
-                      LTRIM(STR(oErr:subcode)) + cNewLine
-					  
-  IF !EMPTY(oErr:filename);      cRet += "File: " + oErr:filename + cNewLine
-  ENDIF
-  
-  IF !EMPTY(oErr:description);   cRet += "Description: " + oErr:description + cNewLine
-  ENDIF
-  
-  IF !EMPTY(oErr:operation);     cRet += "Operation: " + oErr:operation + cNewLine
-  ENDIF
-  
-  IF !EMPTY(oErr:osCode);        cRet += "OS error: " + LTRIM(STR(oErr:osCode)) + cNewLine
-  ENDIF
-  
-  IF VALTYPE(oErr:args) == "A"
-    cRet += "Arguments:" + cNewLine
-    AEVAL(oErr:args, {|X, Y| cRet += STR(Y, 5) + ": " + HB_CStr(X) + cNewLine})
-	cRet += cNewLine
-  ENDIF  
 
-  cRet += "Stack:" + cNewLine
-  
-  nI := 2
-  
-//#if 0
-  DO WHILE ! EMPTY(PROCNAME(++nI))
-    cRet += "    " + PROCNAME(nI) + "(" + LTRIM(STR(PROCLINE(nI))) + ")" + cNewLine
-  ENDDO
+      Eval( oServer:aConfig[ 'ErrorBloc' ], oErr, UGetErrorLog( oErr ) )
+
+   ENDIF
+
+   IF oErr != NIL  // Dummy check to avoid unreachable code warning for RETURN NIL
+
+      Break( oErr )
+
+   ENDIF
+
+   RETURN ''
+
+
+// ----------------------------------------------------------------------------//
+
+STATIC FUNCTION UGetErrorLog( oErr, lWeb )
+
+   LOCAL cRet, nI, cNewLine
+
+// LOCAL ci, apar,nj, xi
+
+   hb_default( @cNewLine, hb_osNewLine() )
+   hb_default( @lWeb, .F. )
+
+   cNewLine := if( lWeb, '<br>', hb_osNewLine() )
+
+
+   cRet := "ERRORLOG =========================================" + cNewLine
+   cRet += "Error: " + oErr:subsystem + "/" + ErrDescCode( oErr:genCode ) + "(" + LTrim( Str( oErr:genCode ) ) + ") " + ;
+      LTrim( Str( oErr:subcode ) ) + cNewLine
+
+   IF !Empty( oErr:filename );      cRet += "File: " + oErr:filename + cNewLine
+   ENDIF
+
+   IF !Empty( oErr:description );   cRet += "Description: " + oErr:description + cNewLine
+   ENDIF
+
+   IF !Empty( oErr:operation );     cRet += "Operation: " + oErr:operation + cNewLine
+   ENDIF
+
+   IF !Empty( oErr:osCode );        cRet += "OS error: " + LTrim( Str( oErr:osCode ) ) + cNewLine
+   ENDIF
+
+   IF ValType( oErr:args ) == "A"
+      cRet += "Arguments:" + cNewLine
+      AEval( oErr:args, {| X, Y | cRet += Str( Y, 5 ) + ": " + hb_CStr( X ) + cNewLine } )
+      cRet += cNewLine
+   ENDIF
+
+   cRet += "Stack:" + cNewLine
+
+   nI := 2
+
+// #if 0
+   DO WHILE ! Empty( ProcName( ++nI ) )
+      cRet += "    " + ProcName( nI ) + "(" + LTrim( Str( ProcLine( nI ) ) ) + ")" + cNewLine
+   ENDDO
 /*
 #else
   DO WHILE ! EMPTY(PROCNAME(++nI))
@@ -2975,481 +3043,481 @@ LOCAL cRet, nI, cNewLine
 #endif
 */
 
-  cRet += cNewLine
+   cRet += cNewLine
 
-  //cRet += "Executable:  " + HB_PROGNAME() + cNewLine
-  cRet += "Versions:" + cNewLine
-  cRet += "  OS: " + OS() + cNewLine
-  cRet += "  Harbour: " + VERSION() + ", " + HB_BUILDDATE() + cNewLine
-  cRet += "  UHttpd2: " + UVersion()   + cNewLine
+   // cRet += "Executable:  " + HB_PROGNAME() + cNewLine
+   cRet += "Versions:" + cNewLine
+   cRet += "  OS: " + OS() + cNewLine
+   cRet += "  Harbour: " + Version() + ", " + hb_BuildDate() + cNewLine
+   cRet += "  UHttpd2: " + UVersion()   + cNewLine
 
-	if hb_isfunction( 'TWebVersion' ) 
-		cRet += '<br><b>TWeb: </b>' + eval( &( '{|| TWebVersion()}' ) )	+ cNewLine
-	endif
-  
-  
-  cRet += cNewLine
+   IF hb_IsFunction( 'TWebVersion' )
+      cRet += '<br><b>TWeb: </b>' + Eval( &( '{|| TWebVersion()}' ) ) + cNewLine
+   ENDIF
 
-  IF oErr:genCode != EG_MEM
-    cRet += "Database areas:" + cNewLine
-    cRet += "    Current: " + LTRIM(STR(SELECT())) + "  " + ALIAS() + cNewLine
 
-    BEGIN SEQUENCE WITH {|o| BREAK(o)}
-      IF USED()
-        cRet += "    Filter: " + DBFILTER() + cNewLine
-        cRet += "    Relation: " + DBRELATION() + cNewLine
-        cRet += "    Index expression: " + ORDKEY(ORDSETFOCUS()) + cNewLine
-        cRet += cNewLine
-        BEGIN SEQUENCE WITH {|o| BREAK(o)}
-          FOR nI := 1 to FCOUNT()
-            cRet += STR(nI, 6) + " " + PADR(FIELDNAME(nI), 14) + ": " + HB_VALTOEXP(FIELDGET(nI)) + cNewLine
-          NEXT
-        RECOVER
-          cRet += "!!! Error reading database fields !!!" + cNewLine
-        END SEQUENCE
-        cRet += cNewLine
-      ENDIF
-    RECOVER
-      cRet += "!!! Error accessing current workarea !!!" + cNewLine
-    END SEQUENCE
+   cRet += cNewLine
 
-    FOR nI := 1 to 250
-      BEGIN SEQUENCE WITH {|o| BREAK(o)}
-        IF USED()
-          DBSELECTAREA(nI)
-          cRet += STR(nI, 6) + " " + RDDNAME() + " " + PADR(ALIAS(), 15) + ;
-                  STR(RECNO()) + "/" + STR(LASTREC()) + ;
-                  IIF(EMPTY(ORDSETFOCUS()), "", " Index " + ORDSETFOCUS() + "(" + LTRIM(STR(ORDNUMBER())) + ")") + cNewLine
-          DBCLOSEAREA()
-        ENDIF
+   IF oErr:genCode != EG_MEM
+      cRet += "Database areas:" + cNewLine
+      cRet += "    Current: " + LTrim( Str( Select() ) ) + "  " + Alias() + cNewLine
+
+      BEGIN SEQUENCE WITH {| o | Break( o ) }
+         IF Used()
+            cRet += "    Filter: " + dbFilter() + cNewLine
+            cRet += "    Relation: " + dbRelation() + cNewLine
+            cRet += "    Index expression: " + ordKey( ordSetFocus() ) + cNewLine
+            cRet += cNewLine
+            BEGIN SEQUENCE WITH {| o | Break( o ) }
+               FOR nI := 1 TO FCount()
+                  cRet += Str( nI, 6 ) + " " + PadR( FieldName( nI ), 14 ) + ": " + hb_ValToExp( FieldGet( nI ) ) + cNewLine
+               NEXT
+            RECOVER
+               cRet += "!!! Error reading database fields !!!" + cNewLine
+            END SEQUENCE
+            cRet += cNewLine
+         ENDIF
       RECOVER
-        cRet += "!!! Error accessing workarea number: " + STR(nI, 4) + "!!!" + cNewLine
+         cRet += "!!! Error accessing current workarea !!!" + cNewLine
       END SEQUENCE
-    NEXT
-    cRet += cNewLine
-  ENDIF
-RETURN cRet
 
-//----------------------------------------------------------------------------//
+      FOR nI := 1 TO 250
+         BEGIN SEQUENCE WITH {| o | Break( o ) }
+            IF Used()
+               dbSelectArea( nI )
+               cRet += Str( nI, 6 ) + " " + rddName() + " " + PadR( Alias(), 15 ) + ;
+                  Str( RecNo() ) + "/" + Str( LastRec() ) + ;
+                  iif( Empty( ordSetFocus() ), "", " Index " + ordSetFocus() + "(" + LTrim( Str( ordNumber() ) ) + ")" ) + cNewLine
+               dbCloseArea()
+            ENDIF
+         RECOVER
+            cRet += "!!! Error accessing workarea number: " + Str( nI, 4 ) + "!!!" + cNewLine
+         END SEQUENCE
+      NEXT
+      cRet += cNewLine
+   ENDIF
 
-function UErrorWeb()
-	local cStyle := ''
-		
-	
-	
-TEXT TO cStyle	
-<html>
-<head>
-	<title>UT Error</title>
-	<link rel="icon" type="image/x-icon" href="files/uhttpd2/images/favicon.ico">
-	
-<!--<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" rel="stylesheet">-->
-</head>
-<style>
+   RETURN cRet
 
-	.uerrorcontent {
-		padding: 5px;
-		padding-top: 0;
-	}
-	
-	.uerrorcontent pre {
-		margin-top: 0px;
-	}
-	
+// ----------------------------------------------------------------------------//
 
+FUNCTION UErrorWeb()
 
-	.uerrorcode {
-		border: 1px solid black;
-		overflow:auto;
-		box-shadow: 5px 5px 5px gray;
-	}
-	
-	.uerrortable {
-		width:100%;
-	}
-	
-	.uerrortablelabel {
-		width: 0;
-		min-width: fit-content;
-		padding-right: 10px;
-		font-weight: bold !important;
-	}
-	
-	.uerrortablefont {
-		font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Liberation Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";
-		font-size: 1rem;
-		font-weight: 400;	
-	}
-	
-	.uerrortitle {
-		padding-left: 5px;
-		background-color: gray;
-		color: white;		
-		border-bottom: 1px solid black;	
-		font-family: arial;
-		font-size: 14px;		
-	}
-	
-	.uerrorsource {		
-		position: relative;
-		bottom: 10px;
-		top: 0px;
-		height: 100%;		
-		padding: 5px;
-		left: 0;
-		right: 0;
-	}
-	
-	.uerrorsource pre {
-		margin-top:0;
-		margin-bottom:0;
-	}
-	
-	
-	.uerrorsys {	
-		/*position: absolute;*/
-		bottom: 0;
-		border-top: 1px solid gray;
-		width: 100%;
-		padding: 5px;
-		font-size: small;		
-		box-sizing: border-box;
-		background-color: white;
-		left: 0;		
-	}
-	
-	.uerrortitletop {
-		font-family: Verdana;
-		margin-bottom:5px;
-	}
-	
-	.uerrorimg {
-		width: 30px;
-		margin-top: -4px;
-		margin-right: 5px;
-		float: left;
-	}
+   LOCAL cStyle := ''
 
-</style>
-<body>
-ENDTEXT 
+   TEXT TO cStyle
+   <html >
+   <head >
+   <title > UT Error < / title >
+   <link rel = "icon" type = "image/x-icon" href = "files/uhttpd2/images/favicon.ico" >
 
-	
-	if ! UIsAjax()		
-		//cStyle += '<h3 class="uerrortitletop"><img class="uerrorimg" src="files\uhttpd2\images\error.png">System Error</h3><hr>'
-		cStyle += '<h3 class="uerrortitletop"><img class="uerrorimg" src="data:image/png;base64, ' + UImgAlert() + '">System Error</h3><hr>'
-		cStyle += '<div class="uerrorcontent" style="padding:5px;">'
-	else
-		cStyle += '<div class="uerrorcontent" style="padding:0px;">'
-	endif
-		
+   <!-- < link href = "https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" rel = "stylesheet" > -->
+   < /head >
+   <style >
+
+   .uerrorcontent {
+   padding: 5px;
+      padding - top: 0;
+      }
+
+   .uerrorcontent pre {
+   margin - top: 0px;
+      }
 
 
-	
-RETU cStyle 
 
-function UErrorLin( cLabel, cValue )
+   .uerrorcode {
+   border: 1px solid black;
+      overflow:auto;
+      box - shadow: 5px 5px 5px gray;
+      }
 
-retu '<tr><td class="uerrortablelabel uerrortablefont">' + cLabel + '</td><td class="uerrortablefont">' + cValue + '</td></tr>'
+   .uerrortable {
+   width:100 % ;
+      }
 
-function UErrorGetDescription( oErr, cInfoCode, cCargo )
+   .uerrortablelabel {
+   width: 0;
+      min - width: fit - content;
+      padding - right: 10px;
+      font - weight: bold !important;
+      }
 
-	local cRet := ''
-	local cNewLine := '<br>'
-	local nI
-	local cStack := ''
-	local cI := ''
-	local cProc := ''
-	local lExit := .f.
-	local cArgs := ''
+   .uerrortablefont {
+   font - family: system - ui, - apple - system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans - serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+      font - size: 1rem;
+      font - weight: 400;
+      }
 
-	hb_default( @cCargo, '' )	
-	
-	if oErr:subcode == 666
-	
-		cRet += '<table class="uerrortable">'
-		
-		IF !EMPTY(oErr:description);   cRet += UErrorLin( 'Description', oErr:description )
-		ENDIF
-		
-		cRet += '</table>'
-		cRet += '</div>'
-	
-		retu cRet
-	endif 
-	
-	cRet += '<table class="uerrortable">'	
-	
-	IF !EMPTY(cFilePrg);      		 cRet += UErrorLin( 'Execute', cFilePrg  )
-	ENDIF
-	
-	if !empty( cCargo )	
-		cRet += '<tr><td colspan="2">' + cCargo + '</td></tr>' 
-	endif	
-	
-	cRet += UErrorLin( 'Error', oErr:subsystem + "/" + ErrDescCode(oErr:genCode) + "(" + LTRIM(STR(oErr:genCode)) + ") " + LTRIM(STR(oErr:subcode)) )
-			  
-	IF !EMPTY(oErr:filename);      cRet += UErrorLin( 'File', oErr:filename )
-	ENDIF
-	
-	IF !EMPTY(oErr:description);   cRet += UErrorLin( 'Description', oErr:description )
-	ENDIF
-	
-	IF !EMPTY(oErr:operation);     cRet += UErrorLin( 'Operation', oErr:operation )
-	ENDIF
-	
-	
-	IF VALTYPE(oErr:args) == "A"
-		AEVAL(oErr:args, {|X, Y| cArgs += ltrim(STR(Y)) + ": " + Alltrim(HB_CStr(X)) + cNewLine})
-		cRet += UErrorLin( 'Arguments', cArgs )
-	ENDIF	
+   .uerrortitle {
+   padding - left: 5px;
+      background - color: gray;
+      color: white;
+      border - bottom: 1px solid black;
+      font - family: arial;
+      font - size: 14px;
+      }
 
-	IF !EMPTY(oErr:osCode);        cRet += UErrorLin( 'OS Error',  LTRIM(STR(oErr:osCode)) ) 
-	ENDIF
-	  
-	nI := 2
-	
-	
-	DO WHILE ! EMPTY(PROCNAME(++nI)) .and. !lExit		
-	
-		cProc := PROCNAME(nI)
-	
-		if At( '(b)UWEBAPI', cProc ) > 0 .OR. ;		
-		   At( '(b)UHTTPD2_ROUTE', cProc ) > 0
-			lExit := .t. 
-		else
-			cStack += '&nbsp;&nbsp;' + cProc + "(" + LTRIM(STR(PROCLINE(nI))) + ")" + cNewLine		
-		endif
-		
-	ENDDO
-	
-	if !empty(cStack) .and. oErr:subcode != 100
-		cRet += UErrorLin( 'Stack', cStack )
-	endif
-	
-	//	---------------------------------------------------
-	
-	if !empty( cInfoCode ) 
-		cRet += '<tr><td colspan="2">' + cInfoCode + '</td></tr>'
-	endif
-	
-	cRet += '</table>'
-	cRet += '</div>'
-	
-	if oErr:subcode == 100 
-		cRet += '<hr>'
-	endif
-	
-retu cRet	
-	
+   .uerrorsource {
+   position: relative;
+      bottom: 10px;
+      top: 0px;
+      height: 100 % ;
+      padding: 5px;
+      left: 0;
+      right: 0;
+      }
 
-//----------------------------------------------------------------------------//
-
-function UErrorGetSys()
-
-	local cRet := ''
-
-	cRet += '</div>'
-	cRet += '<div class="uerrorsys" '
-	cRet += 'style="position:' + IF( UIsAjax(), 'unset;', 'fixed;' ) + '" '
-	cRet += '>'
-	//cRet += '<b>OS: </b>' + OS()
-	cRet += '<b>Harbour: </b>' + VERSION() //+ ", " + HB_BUILDDATE() 
-	cRet += '<br><b>UHttpd2: </b>' + UVersion()
-	
-	if hb_isfunction( 'TWebVersion' ) 		
-		cRet += '<br><b>TWeb: </b>' + eval( &( '{|| TWebVersion()}' ) )
-	endif
-	
-	
-	cRet += '</div>'	
-			
-retu cRet
-
-//----------------------------------------------------------------------------//
-
-function UErrorGetCode( cCode, nLineError )
-
-	local cRet := ''
-	local aLines :=  hb_ATokens( cCode, chr(10) )
-	local cInfo 	:= ''
-	local cLine 	:= ''
-	local n 
-
-	
-	for n = 1 to Len( aLines )
-
-		cLine := aLines[ n ] 
-
-		cLine := UHtmlEncode( cLine )
-		cLine := StrTran( cLine, chr(9), '&nbsp;&nbsp;&nbsp;' )	
-
-	  if nLineError == n 		
-		cInfo += '<b>' + StrZero( n, 4 ) + ' <span class="mc_line_error"  style="background-color:#e15959;color:white;">' + cLine + '</span></b>'
-	  else				  
-		cInfo += StrZero( n, 4 ) + ' ' + cLine 
-	  endif 		  
-
-	next	
-
-	cRet += '<div class="uerrorcode">'
-	cRet += ' <div class="uerrortitle">' + 'Source Code' + '</div>'
-	cRet += ' <div class="uerrorsource"><pre>' + cInfo + '</pre></div>'
-	cRet += '</div>' 	
-
-retu cRet
+   .uerrorsource pre {
+   margin - top:0;
+      margin - bottom:0;
+      }
 
 
-//----------------------------------------------------------------------------//
+   .uerrorsys {
+/*position: absolute;*/
+   bottom: 0;
+      border - top: 1px solid gray;
+      width: 100 % ;
+      padding: 5px;
+      font - size: small;
+      box - sizing: border - box;
+      background - color: white;
+      left: 0;
+      }
+
+   .uerrortitletop {
+   font - family: Verdana;
+      margin - bottom:5px;
+      }
+
+   .uerrorimg {
+   width: 30px;
+      margin - top: - 4px;
+      margin - right: 5px;
+      float: left;
+      }
+
+   < /style >
+   <body >
+   ENDTEXT
 
 
-STATIC FUNC ErrDescCode(nCode)
-LOCAL cI := NIL
-
-  IF nCode > 0 .AND. nCode <= 41
-    cI := {"ARG"     , "BOUND"    , "STROVERFLOW", "NUMOVERFLOW", "ZERODIV" , "NUMERR"     , "SYNTAX"  , "COMPLEXITY" , ; //  1,  2,  3,  4,  5,  6,  7,  8
-           NIL       , NIL        , "MEM"        , "NOFUNC"     , "NOMETHOD", "NOVAR"      , "NOALIAS" , "NOVARMETHOD", ; //  9, 10, 11, 12, 13, 14, 15, 16
-           "BADALIAS", "DUPALIAS" , NIL          , "CREATE"     , "OPEN"    , "CLOSE"      , "READ"    , "WRITE"      , ; // 17, 18, 19, 20, 21, 22, 23, 24
-           "PRINT"   , NIL        , NIL          , NIL          , NIL       , "UNSUPPORTED", "LIMIT"   , "CORRUPTION" , ; // 25, 26 - 29, 30, 31, 32
-           "DATATYPE", "DATAWIDTH", "NOTABLE"    , "NOORDER"    , "SHARED"  , "UNLOCKED"   , "READONLY", "APPENDLOCK" , ; // 33, 34, 35, 36, 37, 38, 39, 40
-           "LOCK"    }[nCode]                                                                                            // 41
-  ENDIF
- 
-RETURN IF(cI == NIL, "", "EG_" + cI)
-
-//----------------------------------------------------------------------------//
+   IF ! UIsAjax()
+// cStyle += '<h3 class="uerrortitletop"><img class="uerrorimg" src="files\uhttpd2\images\error.png">System Error</h3><hr>'
+      cStyle += '<h3 class="uerrortitletop"><img class="uerrorimg" src="data:image/png;base64, ' + UImgAlert() + '">System Error</h3><hr>'
+      cStyle += '<div class="uerrorcontent" style="padding:5px;">'
+   ELSE
+      cStyle += '<div class="uerrorcontent" style="padding:0px;">'
+   ENDIF
 
 
-STATIC FUNC cvt2str(xI, lLong)
-LOCAL cValtype, cI, xJ
 
-  cValtype := VALTYPE(xI)
-  lLong := ! EMPTY(lLong)
-  IF     cValtype == "U"
-    RETURN IF(lLong, "[U]:NIL", "NIL")
-  ELSEIF cValtype == "N"
-    RETURN IF(lLong, "[N]:" + STR(xI), LTRIM(STR(xI)))
-  ELSEIF cValtype $ "CM"
-    IF LEN(xI) <= 260
-      RETURN IF(lLong, "[" + cValtype + LTRIM(STR(LEN(xI))) + "]:", "") + '"' + xI + '"'
-    ELSE
-      RETURN IF(lLong, "[" + cValtype + LTRIM(STR(LEN(xI))) + "]:", "") + '"' + LEFT(xI, 100) + '"...'
-    ENDIF
-  ELSEIF cValtype == "A"
-    RETURN "[A" + LTRIM(STR(LEN(xI))) + "]"
-  ELSEIF cValtype == "H"
-    RETURN "[H" + LTRIM(STR(LEN(xI))) + "]"
-  ELSEIF cValtype == "O"
-    cI := ""
-    IF __objHasMsg(xI, "ID")
-      xJ := xI:ID
-      IF VALTYPE(xJ) != "O";  cI += ",ID=" + cvt2str(xJ)
+
+   RETU cStyle
+
+FUNCTION UErrorLin( cLabel, cValue )
+
+   RETU '<tr><td class="uerrortablelabel uerrortablefont">' + cLabel + '</td><td class="uerrortablefont">' + cValue + '</td></tr>'
+
+FUNCTION UErrorGetDescription( oErr, cInfoCode, cCargo )
+
+   LOCAL cRet := ''
+   LOCAL cNewLine := '<br>'
+   LOCAL nI
+   LOCAL cStack := ''
+   LOCAL cI := ''
+   LOCAL cProc := ''
+   LOCAL lExit := .F.
+   LOCAL cArgs := ''
+
+   hb_default( @cCargo, '' )
+
+   IF oErr:subcode == 666
+
+      cRet += '<table class="uerrortable">'
+
+      IF !Empty( oErr:description );   cRet += UErrorLin( 'Description', oErr:description )
       ENDIF
-    ENDIF
-    IF __objHasMsg(xI, "nID")
-      xJ := xI:nID
-      IF VALTYPE(xJ) != "O";  cI += ",NID=" + cvt2str(xJ)
+
+      cRet += '</table>'
+      cRet += '</div>'
+
+      RETU cRet
+   ENDIF
+
+   cRet += '<table class="uerrortable">'
+
+   IF !Empty( cFilePrg );         cRet += UErrorLin( 'Execute', cFilePrg  )
+   ENDIF
+
+   IF !Empty( cCargo )
+      cRet += '<tr><td colspan="2">' + cCargo + '</td></tr>'
+   ENDIF
+
+   cRet += UErrorLin( 'Error', oErr:subsystem + "/" + ErrDescCode( oErr:genCode ) + "(" + LTrim( Str( oErr:genCode ) ) + ") " + LTrim( Str( oErr:subcode ) ) )
+
+   IF !Empty( oErr:filename );      cRet += UErrorLin( 'File', oErr:filename )
+   ENDIF
+
+   IF !Empty( oErr:description );   cRet += UErrorLin( 'Description', oErr:description )
+   ENDIF
+
+   IF !Empty( oErr:operation );     cRet += UErrorLin( 'Operation', oErr:operation )
+   ENDIF
+
+
+   IF ValType( oErr:args ) == "A"
+      AEval( oErr:args, {| X, Y | cArgs += LTrim( Str( Y ) ) + ": " + AllTrim( hb_CStr( X ) ) + cNewLine } )
+      cRet += UErrorLin( 'Arguments', cArgs )
+   ENDIF
+
+   IF !Empty( oErr:osCode );        cRet += UErrorLin( 'OS Error',  LTrim( Str( oErr:osCode ) ) )
+   ENDIF
+
+   nI := 2
+
+
+   DO WHILE ! Empty( ProcName( ++nI ) ) .AND. !lExit
+
+      cProc := ProcName( nI )
+
+      IF At( '(b)UWEBAPI', cProc ) > 0 .OR. ;
+            At( '(b)UHTTPD2_ROUTE', cProc ) > 0
+         lExit := .T.
+      ELSE
+         cStack += '&nbsp;&nbsp;' + cProc + "(" + LTrim( Str( ProcLine( nI ) ) ) + ")" + cNewLine
       ENDIF
-    ENDIF
-    IF __objHasMsg(xI, "xValue")
-      xJ := xI:xValue
-      IF VALTYPE(xJ) != "O";  cI += ",XVALUE=" + cvt2str(xJ)
+
+   ENDDO
+
+   IF !Empty( cStack ) .AND. oErr:subcode != 100
+      cRet += UErrorLin( 'Stack', cStack )
+   ENDIF
+
+// ---------------------------------------------------
+
+   IF !Empty( cInfoCode )
+      cRet += '<tr><td colspan="2">' + cInfoCode + '</td></tr>'
+   ENDIF
+
+   cRet += '</table>'
+   cRet += '</div>'
+
+   IF oErr:subcode == 100
+      cRet += '<hr>'
+   ENDIF
+
+   RETU cRet
+
+
+// ----------------------------------------------------------------------------//
+
+FUNCTION UErrorGetSys()
+
+   LOCAL cRet := ''
+
+   cRet += '</div>'
+   cRet += '<div class="uerrorsys" '
+   cRet += 'style="position:' + IF( UIsAjax(), 'unset;', 'fixed;' ) + '" '
+   cRet += '>'
+// cRet += '<b>OS: </b>' + OS()
+   cRet += '<b>Harbour: </b>' + Version() // + ", " + HB_BUILDDATE()
+   cRet += '<br><b>UHttpd2: </b>' + UVersion()
+
+   IF hb_IsFunction( 'TWebVersion' )
+      cRet += '<br><b>TWeb: </b>' + Eval( &( '{|| TWebVersion()}' ) )
+   ENDIF
+
+
+   cRet += '</div>'
+
+   RETU cRet
+
+// ----------------------------------------------------------------------------//
+
+FUNCTION UErrorGetCode( cCode, nLineError )
+
+   LOCAL cRet := ''
+   LOCAL aLines :=  hb_ATokens( cCode, Chr( 10 ) )
+   LOCAL cInfo  := ''
+   LOCAL cLine  := ''
+   LOCAL n
+
+   FOR n = 1 TO Len( aLines )
+
+      cLine := aLines[ n ]
+
+      cLine := UHtmlEncode( cLine )
+      cLine := StrTran( cLine, Chr( 9 ), '&nbsp;&nbsp;&nbsp;' )
+
+      IF nLineError == n
+         cInfo += '<b>' + StrZero( n, 4 ) + ' <span class="mc_line_error"  style="background-color:#e15959;color:white;">' + cLine + '</span></b>'
+      ELSE
+         cInfo += StrZero( n, 4 ) + ' ' + cLine
       ENDIF
-    ENDIF
-    RETURN "[O:" + xI:ClassName + cI + "]"
-  ELSEIF cValtype == "D"
-    RETURN IF(lLong, "[D]:", "") + DTOC(xI)
-  ELSEIF cValtype == "L"
-    RETURN IF(lLong, "[L]:", "") + IF(xI, ".T.", ".F.")
-  ELSEIF cValtype == "P"
-    RETURN IF(lLong, "[P]:", "") + "0p" + HB_NumToHex(xI)
-  ELSE
-    RETURN  "[" + cValtype + "]"   // BS,etc
-  ENDIF
-RETURN NIL
 
-//	--- MULTIPART -------------------------------------------------------------- //
-//	https://developer.mozilla.org/es/docs/Web/HTTP/Basics_of_HTTP/MIME_types#multipartform-data 
+   NEXT
 
-static function UParseMultipart( cRaw, hPost, aFiles )
+   cRet += '<div class="uerrorcode">'
+   cRet += ' <div class="uerrortitle">' + 'Source Code' + '</div>'
+   cRet += ' <div class="uerrorsource"><pre>' + cInfo + '</pre></div>'
+   cRet += '</div>'
 
-	local nStart 	:= 0
-	local hServer 	:= UServer()
-	local lExit 	:= .f.
-	local cBoundary, nPos, cBlock, cTag, nBoundary, nIni, nEnd,nOffset 
-	
-	hPost 	:= {=>}
-	aFiles 	:= {}
+   RETU cRet
 
-	//	Buscaremos la bandera
 
-		IF ! HB_HHasKey( hServer, "CONTENT_TYPE" )  	
-			retu nil
-		endif 		
+// ----------------------------------------------------------------------------//
 
-		cTag := 'multipart/form-data; boundary='
+STATIC FUNCTION ErrDescCode( nCode )
 
-		if ( nPos := At( cTag, hServer[ 'CONTENT_TYPE' ]  ) ) == 0 
-			retu nil 
-		endif							
+   LOCAL cI := NIL
 
-		nPos := nPos + len( cTag )		
-	
-		cBoundary := '--' + Substr( hServer[ 'CONTENT_TYPE' ], nPos )
-		nBoundary := len( cBoundary )
-		
-	//	Procesamos todo el RAW y buscamos la/s bandera/s		
-		
+   IF nCode > 0 .AND. nCode <= 41
+      cI := { "ARG", "BOUND", "STROVERFLOW", "NUMOVERFLOW", "ZERODIV", "NUMERR", "SYNTAX", "COMPLEXITY", ; // 1,  2,  3,  4,  5,  6,  7,  8
+         NIL, NIL, "MEM", "NOFUNC", "NOMETHOD", "NOVAR", "NOALIAS", "NOVARMETHOD", ; // 9, 10, 11, 12, 13, 14, 15, 16
+         "BADALIAS", "DUPALIAS", NIL, "CREATE", "OPEN", "CLOSE", "READ", "WRITE", ; // 17, 18, 19, 20, 21, 22, 23, 24
+         "PRINT", NIL, NIL, NIL, NIL, "UNSUPPORTED", "LIMIT", "CORRUPTION", ; // 25, 26 - 29, 30, 31, 32
+         "DATATYPE", "DATAWIDTH", "NOTABLE", "NOORDER", "SHARED", "UNLOCKED", "READONLY", "APPENDLOCK", ; // 33, 34, 35, 36, 37, 38, 39, 40
+         "LOCK"    }[ nCode ]                                                                                            // 41
+   ENDIF
 
-		WHILE ( nStart := hb_At( cBoundary, cRaw ) ) != 0 .AND. !lExit 
-		
-			nIni := nStart + nBoundary 
-			nEnd := hb_At( cBoundary, cRaw, nIni )
-			
-			if nEnd > 0
-				
-				nOffset := nEnd - nIni 								
-				cBlock 	:= Substr( cRaw, nIni, nOffSet )
-				
-				//	Cada Bloque del multipart lo procesaremos								
-				
-				UParseMultipartItem( cBlock, @hPost, @aFiles )
-				
-				cRaw := Substr( cRaw, nEnd )								
-			
-			else 
-			
-				lExit := .t.
+   RETURN IF( cI == NIL, "", "EG_" + cI )
 
-			endif
-		
-		end	
+// ----------------------------------------------------------------------------//
 
-	
-retu nil 
 
-static function UParseMultipartItem( cBlock, hPost, aFiles )
- 
- 
-	local cTag 		:= 'Content-Type:'	
-	local lIsFile
-	
-	//	Chequearemos los tags del bloque. Si tiene el tag Content-Type: es que se
-	//	trata de una fichero.
-	//	Cada bloque podra contener un valor dato o un valor de tipo fichero. 
-	//	Los datos los pondremos en el Hash UPost y el fichero en un array UFiles
-	
-	cBlock 	:= alltrim( cBlock )	
-	lIsFile := hb_at( cTag, cBlock ) > 0
+STATIC FUNCTION cvt2str( xI, lLong )
 
-	if lIsFile 	
-		UParseMultiPartFile( @cBlock, @aFiles )		//	Aqui pasarem de param aFiles						
-	else 	
-		UParseMultiPartData( @cBlock, @hPost )		// Aqui pasarem de param hPost
-	endif
-	
+   LOCAL cValtype, cI, xJ
 
-retu nil 
+   cValtype := ValType( xI )
+   lLong := ! Empty( lLong )
+   IF     cValtype == "U"
+      RETURN IF( lLong, "[U]:NIL", "NIL" )
+   ELSEIF cValtype == "N"
+      RETURN IF( lLong, "[N]:" + Str( xI ), LTrim( Str( xI ) ) )
+   ELSEIF cValtype $ "CM"
+      IF Len( xI ) <= 260
+         RETURN IF( lLong, "[" + cValtype + LTrim( Str( Len( xI ) ) ) + "]:", "" ) + '"' + xI + '"'
+      ELSE
+         RETURN IF( lLong, "[" + cValtype + LTrim( Str( Len( xI ) ) ) + "]:", "" ) + '"' + Left( xI, 100 ) + '"...'
+      ENDIF
+   ELSEIF cValtype == "A"
+      RETURN "[A" + LTrim( Str( Len( xI ) ) ) + "]"
+   ELSEIF cValtype == "H"
+      RETURN "[H" + LTrim( Str( Len( xI ) ) ) + "]"
+   ELSEIF cValtype == "O"
+      cI := ""
+      IF __objHasMsg( xI, "ID" )
+         xJ := xI:ID
+         IF ValType( xJ ) != "O";  cI += ",ID=" + cvt2str( xJ )
+         ENDIF
+      ENDIF
+      IF __objHasMsg( xI, "nID" )
+         xJ := xI:nID
+         IF ValType( xJ ) != "O";  cI += ",NID=" + cvt2str( xJ )
+         ENDIF
+      ENDIF
+      IF __objHasMsg( xI, "xValue" )
+         xJ := xI:xValue
+         IF ValType( xJ ) != "O";  cI += ",XVALUE=" + cvt2str( xJ )
+         ENDIF
+      ENDIF
+      RETURN "[O:" + xI:ClassName + cI + "]"
+   ELSEIF cValtype == "D"
+      RETURN IF( lLong, "[D]:", "" ) + DToC( xI )
+   ELSEIF cValtype == "L"
+      RETURN IF( lLong, "[L]:", "" ) + IF( xI, ".T.", ".F." )
+   ELSEIF cValtype == "P"
+      RETURN IF( lLong, "[P]:", "" ) + "0p" + hb_NumToHex( xI )
+   ELSE
+      RETURN  "[" + cValtype + "]"   // BS,etc
+   ENDIF
+
+   RETURN NIL
+
+// --- MULTIPART -------------------------------------------------------------- //
+// https://developer.mozilla.org/es/docs/Web/HTTP/Basics_of_HTTP/MIME_types#multipartform-data
+
+STATIC FUNCTION UParseMultipart( cRaw, hPost, aFiles )
+
+   LOCAL nStart  := 0
+   LOCAL hServer  := UServer()
+   LOCAL lExit  := .F.
+   LOCAL cBoundary, nPos, cBlock, cTag, nBoundary, nIni, nEnd, nOffset
+
+   hPost  := { => }
+   aFiles  := {}
+
+// Buscaremos la bandera
+
+   IF ! hb_HHasKey( hServer, "CONTENT_TYPE" )
+      RETU NIL
+   ENDIF
+
+   cTag := 'multipart/form-data; boundary='
+
+   IF ( nPos := At( cTag, hServer[ 'CONTENT_TYPE' ]  ) ) == 0
+      RETU NIL
+   ENDIF
+
+   nPos := nPos + Len( cTag )
+
+   cBoundary := '--' + SubStr( hServer[ 'CONTENT_TYPE' ], nPos )
+   nBoundary := Len( cBoundary )
+
+// Procesamos todo el RAW y buscamos la/s bandera/s
+
+
+   WHILE ( nStart := hb_At( cBoundary, cRaw ) ) != 0 .AND. !lExit
+
+      nIni := nStart + nBoundary
+      nEnd := hb_At( cBoundary, cRaw, nIni )
+
+      IF nEnd > 0
+
+         nOffset := nEnd - nIni
+         cBlock  := SubStr( cRaw, nIni, nOffSet )
+
+// Cada Bloque del multipart lo procesaremos
+
+         UParseMultipartItem( cBlock, @hPost, @aFiles )
+
+         cRaw := SubStr( cRaw, nEnd )
+
+      ELSE
+
+         lExit := .T.
+
+      ENDIF
+
+   END
+
+
+   RETU NIL
+
+STATIC FUNCTION UParseMultipartItem( cBlock, hPost, aFiles )
+
+   LOCAL cTag   := 'Content-Type:'
+   LOCAL lIsFile
+
+// Chequearemos los tags del bloque. Si tiene el tag Content-Type: es que se
+// trata de una fichero.
+// Cada bloque podra contener un valor dato o un valor de tipo fichero.
+// Los datos los pondremos en el Hash UPost y el fichero en un array UFiles
+
+   cBlock  := AllTrim( cBlock )
+   lIsFile := hb_At( cTag, cBlock ) > 0
+
+   IF lIsFile
+      UParseMultiPartFile( @cBlock, @aFiles )  // Aqui pasarem de param aFiles
+   ELSE
+      UParseMultiPartData( @cBlock, @hPost )  // Aqui pasarem de param hPost
+   ENDIF
+
+
+   RETU NIL
 
 
 /* Block example to parse.... */
@@ -3462,131 +3530,130 @@ Hi readme [2].
 
 */
 
-static function UParseMultiPartFile( cBlock, aFiles )
+STATIC FUNCTION UParseMultiPartFile( cBlock, aFiles )
 
-	local nEnd := hb_at( Chr(13), cBlock )
-	local uValue 
-	local cInfo, cMime, aInfo, nPos, nHandle	
-	local hFile := {=>}
-	local oServer 
-	local lError := .f.
-	
-	
-	if nEnd > 0 
-	
-		//	Separamos la parte de cabecera de tags y la de valor
-	
-		cInfo := Substr( cBlock, 1, nEnd - 1 )
-		
-			aInfo := hb_atokens( cInfo, ';')
-			
-			//hFile[ 'Content-Disposition' ] 	:= UInfo2Tag( aInfo, 'Content-Disposition:' )
-			//hFile[ 'name' ]			:= UInfo2Tag( aInfo, ' name=' )			//	Alert space
-			hFile[ 'success' ]			:= .f.
-			hFile[ 'filename' ]		:= UInfo2Tag( aInfo, ' filename=' )		//	Alert space
-			hFile[ 'ext' ]				:= lower( hb_fnameext( hFile[ 'filename' ] ) )
-			hFile[ 'tmp_name' ]		:= ''
-			hFile[ 'error' ]			:= ''
-			hFile[ 'size' ]			:= 0
-			
-			if ( nPos := at( '.', hFile[ 'ext' ] ) ) > 0
-				hFile[ 'ext' ] := Substr( hFile[ 'ext' ], nPos + 1 )
-			endif
-			
-			
-			
-		//	Recuperamos MIME y valor
-		
-			cMime := Substr( cBlock, nEnd+1 )					
-		
-			nEnd := hb_at( Chr(13), cMime )
-		
-			if nEnd > 0 
-			
-				//	Recupera info tags 
-			
-				cInfo := Alltrim( Substr( cMime, 1, nEnd - 1 ) )
-				
-				hFile[ 'Content-Type' ] := UInfo2Tag( cInfo, 'Content-Type:' )
-				
+   LOCAL nEnd := hb_At( Chr( 13 ), cBlock )
+   LOCAL uValue
+   LOCAL cInfo, cMime, aInfo, nPos, nHandle
+   LOCAL hFile := { => }
+   LOCAL oServer
+   LOCAL lError := .F.
 
-					
-				//	Recupera value raw
-				
-				uValue	:= Alltrim( Substr( cMime, nEnd + 1 ) )
+   IF nEnd > 0
 
-				if right( uValue, 2 ) == chr(13)+chr(10) 
-					uValue := Substr( uValue, 1, len( uValue)-2 )
-				endif
-				
-				//	Valid files ------------------------------------------
-				
-					//	Es un fichero permitido ? /
-					
-						if !empty(  UGetServer():aFilesAllowed )
-							if Ascan( UGetServer():aFilesAllowed, {|x| lower(x) == hFile[ 'ext' ] } ) == 0 
-								hFile[ 'error' ] := 'Forbidden file type: ' +  hFile[ 'ext' ]
-								lError := .t.				
-							endif				
-						endif				
-					
-					//	Exceded Size ?
-					
-						if  ! lError .and. ( len( uValue ) /  1024 ) > UGetServer():nfile_max_size
-							hFile[ 'size' ]  := len( uValue )
-							hFile[ 'error' ] := 'File exceeds the maximum allowed: ' + ltrim(str(len(uValue))) 
-							lError := .t.				
-						endif
-				
-				//	------------------------------------------------------
-		
-				if ! lError 
+// Separamos la parte de cabecera de tags y la de valor
 
-					hFile[ 'tmp_name' ] := TempFile( UGetServer():cPathTmp, hFile[ 'ext' ] )	
+      cInfo := SubStr( cBlock, 1, nEnd - 1 )
 
-					
-					//	Save to tmp folder --------------------								
-		
-						nHandle := FCreate( hFile[ 'tmp_name' ]  )
-			
-						FWrite( nHandle, uValue )
-						
-						hFile[ 'size' ] := FSeek( nHandle, 0, FS_END )
+      aInfo := hb_ATokens( cInfo, ';' )
 
-						FClose( nHandle )	
-						
-						hFile[ 'success' ]			:= .t.
-						
-					
-					//	Check for Garbage Collector -----------
-					
-						oServer := UGetServer()
+// hFile[ 'Content-Disposition' ]  := UInfo2Tag( aInfo, 'Content-Disposition:' )
+// hFile[ 'name' ]   := UInfo2Tag( aInfo, ' name=' )   // Alert space
+      hFile[ 'success' ]   := .F.
+      hFile[ 'filename' ]  := UInfo2Tag( aInfo, ' filename=' )  // Alert space
+      hFile[ 'ext' ]    := Lower( hb_FNameExt( hFile[ 'filename' ] ) )
+      hFile[ 'tmp_name' ]  := ''
+      hFile[ 'error' ]   := ''
+      hFile[ 'size' ]   := 0
 
-						hb_mutexLock( oServer:hmtxFiles )					
+      IF ( nPos := At( '.', hFile[ 'ext' ] ) ) > 0
+         hFile[ 'ext' ] := SubStr( hFile[ 'ext' ], nPos + 1 )
+      ENDIF
 
 
-							nFiles_Size += ( hFile[ 'size' ] / 1024 )
-						
-							if nFiles_Size > oServer:nfiles_size_garbage_inspector
-							
-								UFilesTmpCollector()
-								nFiles_Size := 0
-								
-							endif
 
-						hb_mutexUnlock(oServer:hmtxFiles)						
-					
-					//	---------------------------------------
-				
-				endif
-		
-			endif						
-			
-			Aadd( aFiles, hFile )
+// Recuperamos MIME y valor
 
-	endif		
+      cMime := SubStr( cBlock, nEnd + 1 )
 
-retu nil 
+      nEnd := hb_At( Chr( 13 ), cMime )
+
+      IF nEnd > 0
+
+// Recupera info tags
+
+         cInfo := AllTrim( SubStr( cMime, 1, nEnd - 1 ) )
+
+         hFile[ 'Content-Type' ] := UInfo2Tag( cInfo, 'Content-Type:' )
+
+
+
+// Recupera value raw
+
+         uValue := AllTrim( SubStr( cMime, nEnd + 1 ) )
+
+         IF Right( uValue, 2 ) == Chr( 13 ) + Chr( 10 )
+            uValue := SubStr( uValue, 1, Len( uValue ) - 2 )
+         ENDIF
+
+// Valid files ------------------------------------------
+
+// Es un fichero permitido ? /
+
+         IF !Empty(  UGetServer():aFilesAllowed )
+            IF AScan( UGetServer():aFilesAllowed, {| x | Lower( x ) == hFile[ 'ext' ] } ) == 0
+               hFile[ 'error' ] := 'Forbidden file type: ' +  hFile[ 'ext' ]
+               lError := .T.
+            ENDIF
+         ENDIF
+
+// Exceded Size ?
+
+         IF  ! lError .AND. ( Len( uValue ) /  1024 ) > UGetServer():nfile_max_size
+            hFile[ 'size' ]  := Len( uValue )
+            hFile[ 'error' ] := 'File exceeds the maximum allowed: ' + LTrim( Str( Len( uValue ) ) )
+            lError := .T.
+         ENDIF
+
+// ------------------------------------------------------
+
+         IF ! lError
+
+            hFile[ 'tmp_name' ] := TempFile( UGetServer():cPathTmp, hFile[ 'ext' ] )
+
+
+// Save to tmp folder --------------------
+
+            nHandle := FCreate( hFile[ 'tmp_name' ]  )
+
+            FWrite( nHandle, uValue )
+
+            hFile[ 'size' ] := FSeek( nHandle, 0, FS_END )
+
+            FClose( nHandle )
+
+            hFile[ 'success' ]   := .T.
+
+
+// Check for Garbage Collector -----------
+
+            oServer := UGetServer()
+
+            hb_mutexLock( oServer:hmtxFiles )
+
+
+            nFiles_Size += ( hFile[ 'size' ] / 1024 )
+
+            IF nFiles_Size > oServer:nfiles_size_garbage_inspector
+
+               UFilesTmpCollector()
+               nFiles_Size := 0
+
+            ENDIF
+
+            hb_mutexUnlock( oServer:hmtxFiles )
+
+// ---------------------------------------
+
+         ENDIF
+
+      ENDIF
+
+      AAdd( aFiles, hFile )
+
+   ENDIF
+
+   RETU NIL
 
 
 
@@ -3598,139 +3665,137 @@ Charly Brown
 
 */
 
-static function UParseMultiPartData( cBlock, hPost )
+STATIC FUNCTION UParseMultiPartData( cBlock, hPost )
 
-	local nEnd := hb_at( Chr(13), cBlock )
-	local uValue 
-	local cInfo, aInfo, cKey, nPos
-	local hFile := {=>}
-	
-	if nEnd > 0 
-	
-		cInfo 	:= Substr( cBlock, 1, nEnd - 1 )				
-		
-		aInfo 	:= hb_atokens( cInfo, ';')
-		
-		cKey 	:= UInfo2Tag( aInfo, ' name=' )	
-		
-		if !empty( cKey )							
-		
-			uValue 	:= alltrim( Substr( cBlock, nEnd+1 ) )	
-			nPos 	:= at( chr(13), uValue )
-			
-			if nPos > 0 
-				uValue := Substr( uValue, 1, nPos-1 )
-			endif 
-			
-			hPost[ cKey ] 	:= uValue 
-			
-		endif		
-	
-	endif
+   LOCAL nEnd := hb_At( Chr( 13 ), cBlock )
+   LOCAL uValue
+   LOCAL cInfo, aInfo, cKey, nPos
+   LOCAL hFile := { => }
 
-retu nil 
+   IF nEnd > 0
+
+      cInfo  := SubStr( cBlock, 1, nEnd - 1 )
+
+      aInfo  := hb_ATokens( cInfo, ';' )
+
+      cKey  := UInfo2Tag( aInfo, ' name=' )
+
+      IF !Empty( cKey )
+
+         uValue  := AllTrim( SubStr( cBlock, nEnd + 1 ) )
+         nPos  := At( Chr( 13 ), uValue )
+
+         IF nPos > 0
+            uValue := SubStr( uValue, 1, nPos - 1 )
+         ENDIF
+
+         hPost[ cKey ]  := uValue
+
+      ENDIF
+
+   ENDIF
+
+   RETU NIL
+
+STATIC FUNCTION UInfo2Tag( uInfo, cTag )
+
+   LOCAL n, nPos, nLen
+   LOCAL cValue := ''
+
+   IF ValType( uInfo ) == 'A'
+
+      nLen := Len( uInfo )
+
+      FOR n := 1 TO nLen
+
+         nPos := At( cTag, uInfo[ n ] )
+
+         IF nPos > 0
+
+            cValue := SubStr( uInfo[ n ], nPos + Len( cTag ) )
+
+            IF Left( cValue, 1 ) == '"'
+               cValue := SubStr( cValue, 2 )
+            ENDIF
+
+            IF Right( cValue, 1 ) == '"'
+               cValue := SubStr( cValue, 1, Len( cValue ) - 1 )
+            ENDIF
+
+         ENDIF
+
+      NEXT
+
+   ELSE
+
+      nPos := At( cTag, uInfo )
+
+      IF nPos > 0
+
+         cValue := SubStr( uInfo, nPos + Len( cTag ) )
+
+         IF Left( cValue, 1 ) == '"'
+            cValue := SubStr( cValue, 2 )
+         ENDIF
+
+         IF Right( cValue, 1 ) == '"'
+            cValue := SubStr( cValue, 1, Len( cValue ) - 1 )
+         ENDIF
+
+      ENDIF
+
+   ENDIF
+
+   RETU cValue
+
+STATIC FUNCTION UFilesTmpCollector( lDelAll )
+
+   LOCAL cPath  := UGetServer():cPathTmp
+   LOCAL aFiles  := Directory( cPath + '/*.*' )
+   LOCAL nFiles  := Len( aFiles )
+   LOCAL nSFiles  := 0
+   LOCAL nSize  := 0
+   LOCAL nTime  := hb_MilliSeconds()
+   LOCAL nLifeDays := UGetServer():nfiles_lifeDays
+   LOCAL nI, dMaxDate
+
+   hb_default( @lDelAll, .F. ) // .T. when start server
+
+   dMaxDate := Date() - nLifeDays
+
+   IF lDelAll
+      oServer:Dbg( 'Init Garbage Tmp Files Procces!' )
+   ELSE
+      oServer:Dbg( 'Init Garbage Tmp Files Procces! => ' + DToC( dMaxDate ) )
+   ENDIF
+
+   FOR nI := 1 TO nFiles
+
+      IF aFiles[ nI ][ 3 ] <= dMaxDate .OR. lDelAll
+
+         IF FErase( cPath + '/' + aFiles[ nI ][ 1 ] ) == 0
+            nSFiles++
+            nSize  += aFiles[ nI ][ 2 ]
+         ENDIF
+
+      ENDIF
+   NEXT
+
+   oServer:Dbg( '=====================================' )
+   oServer:Dbg( 'Tmp files deleted: ' + LTrim( Str( nSFiles ) ) )
+   oServer:Dbg( 'Tmp size deleted: ' + LTrim( Str( nSize ) ) + ' kb.' )
+   oServer:Dbg( 'Time proccess for garbage: ' + LTrim( Str( hb_MilliSeconds() - nTime ) ) + ' ms.' )
+   oServer:Dbg( '=====================================' )
 
 
-static function UInfo2Tag( uInfo, cTag )
+   RETU NIL
 
-	local n, nPos, nLen
-	local cValue := ''
-	
-	if valtype( uInfo ) == 'A'
-	
-		nLen := len( uInfo )
-	
-		for n := 1 to nLen 
-		
-			nPos := at( cTag, uInfo[n] ) 
-			
-			if nPos > 0
-			
-				cValue := Substr( uInfo[n], nPos + len(cTag) )	
+FUNCTION UImgAlert()
 
-				if LEFT( cValue, 1 ) == '"'
-					cValue := Substr( cValue, 2 )
-				endif
-				
-				if RIGHT( cValue, 1 ) == '"'
-					cValue := Substr( cValue, 1, len(cValue)-1 )
-				endif				
-			
-			endif
-		
-		next
-	
-	else 
-	
-		nPos := at( cTag, uInfo ) 
-		
-		if nPos > 0
-		
-			cValue := Substr( uInfo, nPos + len(cTag) )	
+   LOCAL cImg := ''
 
-			if LEFT( cValue, 1 ) == '"'
-				cValue := Substr( cValue, 2 )
-			endif
-			
-			if RIGHT( cValue, 1 ) == '"'
-				cValue := Substr( cValue, 1, len(cValue)-1 )
-			endif			
-		
-		endif			
-	
-	endif
+   TEXT TO cImg
+   iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAACKJJREFUeF7tm3WsHFUUxn / FneLursU1uAV3d9fgWry4e9ECxT04xYMTijsUDU5xlyL5NWeayWT37czuzL6y5fzzmvd2Z + 797pHvfOe2ByO49RjB9093AjASMDrgz5 + 76yC6C4BJgIWBGYG / gbeAN4FP2g1EdwAwAbAhcAAwM / AHMAi4EugHfNVOENoNwBjAysBRwLTAK + EBcwBfA8cBNwJ / tQuEdgMwC9AbWB + 4HTgtNrs9sAnwEHA48E4nAjBObNzT / xw4CHg0NroocHyExDnA + e1KjO3yAN + zQLj + 4sB5wJGpUx4f2DxO / 43wkqfb4QXtAmAiYGvgYOB5YD / gtcwGzQOHASsClwKnAN9UDUI7ABgVWBboA0wFnA6cWWNjowHrxMZNiEcAd3YCAGb7vYAdgduA / YEv6mxsGmBPYCvglgDtsypBqNoDxgTWAI4GhkQOcGNd2TJRHcYFTgauAP6sCoSqAUjiWhAkOQcGEF3tZ2LAsrgP8GTkhdf / iwB4ghvFqX8UZe + xnBuxYpgz5ouSeDbwY87vFvpYVR4wcnB9XX / BGmWv0SLlDBsDxwDvA4ekOEOj7xb6e1UATArsAOwLWM / l / db3IiZrlCytBfQHTqqiT6gCAMuZtVwXnjDKmsyuqI0CrB4J0XZZb2qUQIu + oxI9YIYoddsAN8e / v8ysTOAFyiqh / RJdYXYDUwK7Rgm9K9jjx4V32cUXyvaAsYC147R + jQXfmnm / xEiQ5P8SI00d4MXQBWyP07ZEuP8UQaJkib + VBULZAMwdDG4V4OIoewoeidkOm9klRbK + 8aIb1AMGRMZ / KlMq1Q8kRtLo56IsClYpViYAbmazaGjejYbm8dQqdXnLm0xwzcjuzwL / RKWYDLg3cofqUNrmSTVSFwFnAN + XgUBZAJiwdFVb3TmBs4ATMgu0MuwWJylANjvmCPPABhHrPWNz9gtpM7T8jC2z4aKm8ODwBIDxabLaA3gk6nb2FC1ruvF6ER6Hpiju1MH87ANuCKCyJ2zesKxKrq4NMLLJtTAmZXiAcW3MW / Y8TU / + shor0Y3VAASiVklTD7gKeCAaoixvkFytFP2BSrLy2fUhqRXeePKFMgBQ2PRkNwWuC / JSS9hsFQDXbJ4wge4eIWDL / F7Tu4eWecDY4dKe6LeAbm02r2VlAOBzFwn3nwmwR7gweERTOLTiAX7XkqZbLweYne32zOpVApDIZ4Jtl + jPZ5rafYsekK7Pxqtylu1rPSvLA3x + 0mavEG32qeGBhXFo1gNkc0tHMps + GFq2dGUXUyYAJluJlAlX + Uzw7ym8 + xY8wLJlyTIhmbV1w7cbLKBMAHxVIp9tEU2SrbNyeyFrxgNEf7Uoe37 / WOCaHG8tGwBLofKZspniy4nA1UXls2YAmC1OfN3YuKxMN2xkZQPg + xyybhei6xMRCg5ac1tRAETawab199N4oeOsPFYFAL43kc96hfJ0LvBTngX5mSIA6HILBd + 3FmenO43eWRUANmHOFRNSpHymN + SyIgAkaq183OmOQ0y7ubw2V3xn / ojXNF2WTm8L9A0iZU9hw5TXEvlM9Vn5zLyQJyxze4Ct7PKR + Iw7664eUMRkbmp8NjNq / QKYNDw2OpIo5XD5vVT3hwIP96aJm7csqi1IzhzCNLS8HjBdzPOc790d7ualhiLmfNCEZcn8ADBWZXC / A0tFB6iXOTK3nS5qqkt2pL7DkZqtuXmqS8sDgL24AoZ8X7nKBzcjTppDdH9PWganzv9CJCx / 7wbs8fWMbCvdaB / J35cM + cymSS + 9PACu + / 08AChwmGBWjWss / rvZqa2xbtZWMLV / MJw0539Oi43fO / Lutsbn9CC91DxlfpIhegulaQCSDOuDvLXh6eTOsF28VxbnVZlZo3l6NRJrGSOweSMHLBadopPouvmkKw9QgPAhur5e4IPMrsO7JSM5162Ebll8uN6iuwLAONolMrKnbmZ9uaTdqyPYT9hR2j4roFi2vivp + VYcxVcbJuUzq8PgWs + uB4BlRRdV5nKx9WSuZtZrNXByZD9hJ + mNMGu + krfDDweprZplW5lOEVWzUbqplnxWDwAvMCYyl8qtmd / S1aoZ + 0rnW8ZwxIsSAmDyMk5VdxRWyrgrqFC7c3Ss94cHf5jdQC0APHEbHV1el3TznkyrpuRtjfa5ymf2EPIAL044QdYjnCap + UuGyggHKbveK9Eyhzms8R3DrBYAZlE3reDhGEo3KmMxblIl15pvfVZASa7K6BnODMw5VgK5QhnVxuGsUyWn05ZDSZihVhcAT0l5Wve3NFnzB7Z69PF9c4rsT / rrQu7LPFc2KHlR8xN06XIZ5rjO8u2BXhJMc9iBpj3A6Y6LsHx4scnFuOCyzIzsAtQPPZHsPUCHpbqr + afMdxvSTpVMhHqcnMYR3FBLAyAVtQnZKWQuY7WQuNAAKa / K6fYqSoaCQ5DEZIhOlT157wI0S7frLcEcsHdoGSZ1Vayh4ZcA4AKkupY9Obs / TURlWtINOkBxdmDra8mzCtgqe6NEicty5W2QMu8L6932HwJvb6OnyQ + GJABISWVMzu2c7ngCZd / PU0l2tCW49u / e / ZGvewXOBKlgosDq38vKO + kDnDxKoh2j80vz2yAB8EKSMWJs2D66 + bwyV1EPMR49ZcNMCUtSlDBBs785IlcfX / TF8XkVLb1g9shvfQXAXxrvnsIFEae5NbUmFmKPYTjoDcn / GFFbsDWu4uTTS5R6K6Pr7ea33gLgxWXbR1 + uW5TF95vApi1fsbFTyVbh6i8A0kQ5uYlB4tPpltxjsiwOFgA5viNmr6a + 1Om7j / 0lCnUvATAb24pag72glL7U1Il4WPKVzuQFPQXAcZIcwNO3OansZvZwgqYql0KPFHmAAHgnVx3ehkR0Ot30cO8ZWnn6CYAdkyXQ2ig6nW623zZkTrMH5lGFOxqQ / wHo6OPNsbl / Aa2y86hAqj7XAAAAAElFTkSuQmCC
+   ENDTEXT
 
-retu cValue
-
-
-static function UFilesTmpCollector( lDelAll )
-
-	local cPath 	:= UGetServer():cPathTmp 
-	local aFiles 	:= Directory( cPath + '/*.*' )
-	local nFiles 	:= len( aFiles )
-	local nSFiles 	:= 0
-	local nSize 	:= 0
-	local nTime 	:= hb_milliseconds()	
-	local nLifeDays := UGetServer():nfiles_lifeDays 	
-	local nI, dMaxDate
-	
-	hb_default( @lDelAll, .F. )	//	.T. when start server
-	
-	dMaxDate := date() - nLifeDays 
-	
-	if lDelAll
-		oServer:Dbg( 'Init Garbage Tmp Files Procces!' )
-	else
-		oServer:Dbg( 'Init Garbage Tmp Files Procces! => ' + dtoc(dMaxDate) )
-	endif
-	
-	for nI := 1 to nFiles 
-	
-		if aFiles[nI][3] <= dMaxDate .or. lDelAll 
-			
-			if fErase( cPath + '/' + aFiles[nI][1] ) == 0
-				nSFiles++
-				nSize 	+= aFiles[nI][2]
-			endif
-			
-		endif
-	next	
-	
-	oServer:Dbg( '=====================================' )
-	oServer:Dbg( 'Tmp files deleted: ' + ltrim(str( nSFiles )) )
-	oServer:Dbg( 'Tmp size deleted: ' + ltrim(str( nSize )) + ' kb.' )
-	oServer:Dbg( 'Time proccess for garbage: ' + ltrim(str( hb_milliseconds() - nTime )) + ' ms.' )
-	oServer:Dbg( '=====================================' )
-	
-
-retu nil 
-
-function UImgAlert()
-
-	local cImg := ''
-
-TEXT TO cImg	
-iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAACKJJREFUeF7tm3WsHFUUxn/FneLursU1uAV3d9fgWry4e9ECxT04xYMTijsUDU5xlyL5NWeayWT37czuzL6y5fzzmvd2Z+797pHvfOe2ByO49RjB9093AjASMDrgz5+76yC6C4BJgIWBGYG/gbeAN4FP2g1EdwAwAbAhcAAwM/AHMAi4EugHfNVOENoNwBjAysBRwLTAK+EBcwBfA8cBNwJ/tQuEdgMwC9AbWB+4HTgtNrs9sAnwEHA48E4nAjBObNzT/xw4CHg0NroocHyExDnA+e1KjO3yAN+zQLj+4sB5wJGpUx4f2DxO/43wkqfb4QXtAmAiYGvgYOB5YD/gtcwGzQOHASsClwKnAN9UDUI7ABgVWBboA0wFnA6cWWNjowHrxMZNiEcAd3YCAGb7vYAdgduA/YEv6mxsGmBPYCvglgDtsypBqNoDxgTWAI4GhkQOcGNd2TJRHcYFTgauAP6sCoSqAUjiWhAkOQcGEF3tZ2LAsrgP8GTkhdf/iwB4ghvFqX8UZe+xnBuxYpgz5ouSeDbwY87vFvpYVR4wcnB9XX/BGmWv0SLlDBsDxwDvA4ekOEOj7xb6e1UATArsAOwLWM/l/db3IiZrlCytBfQHTqqiT6gCAMuZtVwXnjDKmsyuqI0CrB4J0XZZb2qUQIu+oxI9YIYoddsAN8e/v8ysTOAFyiqh/RJdYXYDUwK7Rgm9K9jjx4V32cUXyvaAsYC147R+jQXfmnm/xEiQ5P8SI00d4MXQBWyP07ZEuP8UQaJkib+VBULZAMwdDG4V4OIoewoeidkOm9klRbK+8aIb1AMGRMZ/KlMq1Q8kRtLo56IsClYpViYAbmazaGjejYbm8dQqdXnLm0xwzcjuzwL/RKWYDLg3cofqUNrmSTVSFwFnAN+XgUBZAJiwdFVb3TmBs4ATMgu0MuwWJylANjvmCPPABhHrPWNz9gtpM7T8jC2z4aKm8ODwBIDxabLaA3gk6nb2FC1ruvF6ER6Hpiju1MH87ANuCKCyJ2zesKxKrq4NMLLJtTAmZXiAcW3MW/Y8TU/+shor0Y3VAASiVklTD7gKeCAaoixvkFytFP2BSrLy2fUhqRXeePKFMgBQ2PRkNwWuC/JSS9hsFQDXbJ4wge4eIWDL/F7Tu4eWecDY4dKe6LeAbm02r2VlAOBzFwn3nwmwR7gweERTOLTiAX7XkqZbLweYne32zOpVApDIZ4Jtl+jPZ5rafYsekK7Pxqtylu1rPSvLA3x+0mavEG32qeGBhXFo1gNkc0tHMps+GFq2dGUXUyYAJluJlAlX+Uzw7ym8+xY8wLJlyTIhmbV1w7cbLKBMAHxVIp9tEU2SrbNyeyFrxgNEf7Uoe37/WOCaHG8tGwBLofKZspniy4nA1UXls2YAmC1OfN3YuKxMN2xkZQPg+xyybhei6xMRCg5ac1tRAETawab199N4oeOsPFYFAL43kc96hfJ0LvBTngX5mSIA6HILBd+3FmenO43eWRUANmHOFRNSpHymN+SyIgAkaq183OmOQ0y7ubw2V3xn/ojXNF2WTm8L9A0iZU9hw5TXEvlM9Vn5zLyQJyxze4Ct7PKR+Iw7664eUMRkbmp8NjNq/QKYNDw2OpIo5XD5vVT3hwIP96aJm7csqi1IzhzCNLS8HjBdzPOc790d7ualhiLmfNCEZcn8ADBWZXC/A0tFB6iXOTK3nS5qqkt2pL7DkZqtuXmqS8sDgL24AoZ8X7nKBzcjTppDdH9PWganzv9CJCx/7wbs8fWMbCvdaB/J35cM+cymSS+9PACu+/08AChwmGBWjWss/rvZqa2xbtZWMLV/MJw0539Oi43fO/Lutsbn9CC91DxlfpIhegulaQCSDOuDvLXh6eTOsF28VxbnVZlZo3l6NRJrGSOweSMHLBadopPouvmkKw9QgPAhur5e4IPMrsO7JSM5162Ebll8uN6iuwLAONolMrKnbmZ9uaTdqyPYT9hR2j4roFi2vivp+VYcxVcbJuUzq8PgWs+uB4BlRRdV5nKx9WSuZtZrNXByZD9hJ+mNMGu+krfDDweprZplW5lOEVWzUbqplnxWDwAvMCYyl8qtmd/S1aoZ+0rnW8ZwxIsSAmDyMk5VdxRWyrgrqFC7c3Ss94cHf5jdQC0APHEbHV1el3TznkyrpuRtjfa5ymf2EPIAL044QdYjnCap+UuGyggHKbveK9Eyhzms8R3DrBYAZlE3reDhGEo3KmMxblIl15pvfVZASa7K6BnODMw5VgK5QhnVxuGsUyWn05ZDSZihVhcAT0l5Wve3NFnzB7Z69PF9c4rsT/rrQu7LPFc2KHlR8xN06XIZ5rjO8u2BXhJMc9iBpj3A6Y6LsHx4scnFuOCyzIzsAtQPPZHsPUCHpbqr+afMdxvSTpVMhHqcnMYR3FBLAyAVtQnZKWQuY7WQuNAAKa/K6fYqSoaCQ5DEZIhOlT157wI0S7frLcEcsHdoGSZ1Vayh4ZcA4AKkupY9Obs/TURlWtINOkBxdmDra8mzCtgqe6NEicty5W2QMu8L6932HwJvb6OnyQ+GJABISWVMzu2c7ngCZd/PU0l2tCW49u/e/ZGvewXOBKlgosDq38vKO+kDnDxKoh2j80vz2yAB8EKSMWJs2D66+bwyV1EPMR49ZcNMCUtSlDBBs785IlcfX/TF8XkVLb1g9shvfQXAXxrvnsIFEae5NbUmFmKPYTjoDcn/GFFbsDWu4uTTS5R6K6Pr7ea33gLgxWXbR1+uW5TF95vApi1fsbFTyVbh6i8A0kQ5uYlB4tPpltxjsiwOFgA5viNmr6a+1Om7j/0lCnUvATAb24pag72glL7U1Il4WPKVzuQFPQXAcZIcwNO3OansZvZwgqYql0KPFHmAAHgnVx3ehkR0Ot30cO8ZWnn6CYAdkyXQ2ig6nW623zZkTrMH5lGFOxqQ/wHo6OPNsbl/Aa2y86hAqj7XAAAAAElFTkSuQmCC
-ENDTEXT 
-
-retu cImg 
+   RETU cImg

@@ -1,245 +1,242 @@
 
 CLASS TWebCard FROM TWebForm
 
-	DATA lFluid 					INIT .f.
+   DATA lFluid      INIT .F.
 
 
-	METHOD New( oParent, cId, cClass, cStyle ) 		CONSTRUCTOR	
+   METHOD New( oParent, cId, cClass, cStyle )   CONSTRUCTOR
 
-	METHOD AddControl( uValue )		INLINE Aadd( ::aControls, uValue )
-	METHOD Html( cCode ) 			INLINE Aadd( ::aControls, cCode )
-	
-	METHOD AddHeader( cCode ) 
-	METHOD EndHeader()		 		INLINE ::Html( '</div>'  + CRLF)
-	
-	METHOD AddBody( cCode ) 
-	METHOD EndBody()		 		INLINE ::Html( '</div>'  + CRLF)
-	
-	
-	METHOD AddFooter( cCode )	
-	
-	METHOD EndCard()				INLINE ::Html( '</div>'  + CRLF ) 		//	::Html( '</div></div>' )
-			
-	METHOD Activate()	
-	
-	
-ENDCLASS 
+   METHOD AddControl( uValue )  INLINE AAdd( ::aControls, uValue )
+   METHOD Html( cCode )    INLINE AAdd( ::aControls, cCode )
 
-METHOD New( oParent, cId, cClass, cStyle) CLASS TWebCard		
+   METHOD AddHeader( cCode )
+   METHOD EndHeader()     INLINE ::Html( '</div>'  + CRLF )
 
-	
-	hb_default( @cId, '' )
-	hb_default( @cClass, '' )
-	hb_default( @cStyle, '' )
-	
-	::oParent 		:= oParent
-	::cId	 		:= cId	
-	::cClass 		:= cClass
-	::cStyle		:= cStyle
-	
+   METHOD AddBody( cCode )
+   METHOD EndBody()     INLINE ::Html( '</div>'  + CRLF )
 
-	
-	IF Valtype( oParent ) == 'O'
-	
-		oParent:AddControl( SELF )	
-		
-		::lDessign := oParent:lDessign
-		::cSizing  := oParent:cSizing
-		::cType    := oParent:cType
-		::lFluid   := oParent:lFluid
-		
-	//	We're looking for a TWEBFORM. We need cId_Dialog
-		::cId_Dialog 	:= UIdFormParent( oParent )		
-		
-	ENDIF
 
-RETU SELF
+   METHOD AddFooter( cCode )
+
+   METHOD EndCard()    INLINE ::Html( '</div>'  + CRLF )   // ::Html( '</div></div>' )
+
+   METHOD Activate()
+
+ENDCLASS
+
+METHOD New( oParent, cId, cClass, cStyle ) CLASS TWebCard
+
+   hb_default( @cId, '' )
+   hb_default( @cClass, '' )
+   hb_default( @cStyle, '' )
+
+   ::oParent   := oParent
+   ::cId    := cId
+   ::cClass   := cClass
+   ::cStyle  := cStyle
+
+
+
+   IF ValType( oParent ) == 'O'
+
+      oParent:AddControl( SELF )
+
+      ::lDessign := oParent:lDessign
+      ::cSizing  := oParent:cSizing
+      ::cType    := oParent:cType
+      ::lFluid   := oParent:lFluid
+
+// We're looking for a TWEBFORM. We need cId_Dialog
+      ::cId_Dialog  := UIdFormParent( oParent )
+
+   ENDIF
+
+   RETU SELF
 
 METHOD Activate() CLASS TWebCard
 
-	LOCAL cHtml := ''
-	LOCAL nI
-	
-	//cHtml += '<div class="card-deck" >'	
-	
-	cHtml += '<div class="card ' 
-	
-	if !empty( ::cClass )
-		cHtml += ::cClass
-	endif
-	
-	cHtml += '" '
-	
-	if !empty( ::cStyle )	
-		cHtml += 'style="' + ::cStyle + '" '
-	endif	
-	
-	
-	cHtml += '>' + CRLF
-		
-	FOR nI := 1 To len( ::aControls )
-	
-		IF Valtype( ::aControls[nI] ) == 'O'
+   LOCAL cHtml := ''
+   LOCAL nI
 
-			cHtml += ::aControls[nI]:Activate()			
-		ELSE	
-		
-			cHtml += ::aControls[nI]
-		ENDIF
-	
-	NEXT			
+// cHtml += '<div class="card-deck" >'
 
-RETU cHtml
+   cHtml += '<div class="card '
+
+   IF !Empty( ::cClass )
+      cHtml += ::cClass
+   ENDIF
+
+   cHtml += '" '
+
+   IF !Empty( ::cStyle )
+      cHtml += 'style="' + ::cStyle + '" '
+   ENDIF
+
+
+   cHtml += '>' + CRLF
+
+   FOR nI := 1 TO Len( ::aControls )
+
+      IF ValType( ::aControls[ nI ] ) == 'O'
+
+         cHtml += ::aControls[ nI ]:Activate()
+      ELSE
+
+         cHtml += ::aControls[ nI ]
+      ENDIF
+
+   NEXT
+
+   RETU cHtml
 
 METHOD AddHeader( cCode, cClass, cStyle ) CLASS TWebCard
 
-	local cHtml, oHeader	
+   LOCAL cHtml, oHeader
 
-	hb_default( @cCode, '' )
-	hb_default( @cClass, '' )
-	hb_default( @cStyle, '' )	
-	
-	cHtml := '<div class="card-header ' + cClass + '" '
-	
-	if !empty( cStyle )
-		cHtml += 'style="' + cStyle + '" >' 	
-	endif	
-	
-	cHtml += '>' + CRLF		
-	
-	if !empty( cCode )
-	
-		cHtml += cCode + '</div>' + CRLF
-	
-		::Html( cHtml )
-		
-	else
-	
-		oHeader := TCardContainer():New( SELF )		
-	
-		oHeader:Html( cHtml )	
-		
-	endif 
+   hb_default( @cCode, '' )
+   hb_default( @cClass, '' )
+   hb_default( @cStyle, '' )
 
-RETU oHeader 
+   cHtml := '<div class="card-header ' + cClass + '" '
+
+   IF !Empty( cStyle )
+      cHtml += 'style="' + cStyle + '" >'
+   ENDIF
+
+   cHtml += '>' + CRLF
+
+   IF !Empty( cCode )
+
+      cHtml += cCode + '</div>' + CRLF
+
+      ::Html( cHtml )
+
+   ELSE
+
+      oHeader := TCardContainer():New( SELF )
+
+      oHeader:Html( cHtml )
+
+   ENDIF
+
+   RETU oHeader
 
 METHOD AddBody( cCode, cClass, cStyle ) CLASS TWebCard
 
-	local cHtml, oBody 
-	
-	hb_default( @cCode, '' )	
-	hb_default( @cClass, '' )
-	hb_default( @cStyle, '' )
-	
-	cHtml := '<div class="card-body ' + cClass + '" '
-	
-	if !empty( cStyle )
-		cHtml += 'style="' + cStyle + '" >' 	
-	endif	
-	
-	cHtml += '>' + CRLF	
-	
-	if !empty( cCode )
-	
-		cHtml += cCode	+ '</div>' + CRLF
-	
-		::Html( cHtml )
-		
-	else
+   LOCAL cHtml, oBody
 
-		oBody := TCardContainer():New( SELF )		
-	
-		oBody:Html( cHtml )	
-		
-	endif 				
-	
-RETU oBody 
+   hb_default( @cCode, '' )
+   hb_default( @cClass, '' )
+   hb_default( @cStyle, '' )
 
+   cHtml := '<div class="card-body ' + cClass + '" '
+
+   IF !Empty( cStyle )
+      cHtml += 'style="' + cStyle + '" >'
+   ENDIF
+
+   cHtml += '>' + CRLF
+
+   IF !Empty( cCode )
+
+      cHtml += cCode + '</div>' + CRLF
+
+      ::Html( cHtml )
+
+   ELSE
+
+      oBody := TCardContainer():New( SELF )
+
+      oBody:Html( cHtml )
+
+   ENDIF
+
+   RETU oBody
 
 METHOD AddFooter( cCode, cClass, cStyle ) CLASS TWebCard
 
-	local cHtml, oFooter 	
+   LOCAL cHtml, oFooter
 
-	hb_default( @cCode, '' )
-	hb_default( @cClass, '' )
-	hb_default( @cStyle, '' )
+   hb_default( @cCode, '' )
+   hb_default( @cClass, '' )
+   hb_default( @cStyle, '' )
 
-	cHtml := '<div class="card-footer ' + cClass + '" '
-	
-	if !empty( cStyle )
-		cHtml += 'style="' + cStyle + '" >' 	
-	endif	
-	
-	cHtml += '>' + CRLF		
-	
-	if !empty( cCode )
-	
-		cHtml += '<small class="text-muted">' + cCode + '</small></div>' + CRLF		
-	
-		::Html( cHtml )
-		
-	else
-	
-		oFooter := TCardContainer():New( SELF )		
-	
-		oFooter:Html( cHtml )	
-		
-	endif 	
+   cHtml := '<div class="card-footer ' + cClass + '" '
 
-RETU oFooter 
+   IF !Empty( cStyle )
+      cHtml += 'style="' + cStyle + '" >'
+   ENDIF
+
+   cHtml += '>' + CRLF
+
+   IF !Empty( cCode )
+
+      cHtml += '<small class="text-muted">' + cCode + '</small></div>' + CRLF
+
+      ::Html( cHtml )
+
+   ELSE
+
+      oFooter := TCardContainer():New( SELF )
+
+      oFooter:Html( cHtml )
+
+   ENDIF
+
+   RETU oFooter
 
 
-//	---------------------------------------------------	//
+// --------------------------------------------------- //
 
 CLASS TCardContainer FROM TWebForm
 
-	DATA cSizing					INIT ''
-	DATA cId_Dialog				INIT ''
-	DATA lFluid					INIT ''
+   DATA cSizing     INIT ''
+   DATA cId_Dialog    INIT ''
+   DATA lFluid     INIT ''
 
 
-	METHOD New( oParent ) 		CONSTRUCTOR	
+   METHOD New( oParent )   CONSTRUCTOR
 
-	METHOD End() 					INLINE ::Html( '</div>' )
-	
-	METHOD Activate()
+   METHOD End()      INLINE ::Html( '</div>' )
 
-ENDCLASS 
+   METHOD Activate()
 
-METHOD New( oParent ) CLASS TCardContainer	
+ENDCLASS
 
-	local lFound := .f.
-	
-	::oParent 		:= oParent
-	
-	IF Valtype( oParent ) == 'O'	
-		oParent:AddControl( SELF )	
-		
-		::lDessign 	:= oParent:lDessign
-		::cSizing  		:= oParent:cSizing
-		::cType    		:= oParent:cType
-		::lFluid    		:= oParent:lFluid
-		
-	//	We're looking for a TWEBFORM. We need cId_Dialog
-		::cId_Dialog 	:= UIdFormParent( oParent )
-	
-	ENDIF
+METHOD New( oParent ) CLASS TCardContainer
 
-RETU SELF
+   LOCAL lFound := .F.
+
+   ::oParent   := oParent
+
+   IF ValType( oParent ) == 'O'
+      oParent:AddControl( SELF )
+
+      ::lDessign  := oParent:lDessign
+      ::cSizing    := oParent:cSizing
+      ::cType      := oParent:cType
+      ::lFluid      := oParent:lFluid
+
+// We're looking for a TWEBFORM. We need cId_Dialog
+      ::cId_Dialog  := UIdFormParent( oParent )
+
+   ENDIF
+
+   RETU SELF
 
 METHOD Activate() CLASS TCardContainer
 
-	LOCAL cHtml := ''
-	LOCAL nI		
+   LOCAL cHtml := ''
+   LOCAL nI
 
-	FOR nI := 1 To len( ::aControls )
-		
-		IF Valtype( ::aControls[nI] ) == 'O'	
-			cHtml += ::aControls[nI]:Activate()			
-		ELSE				
-			cHtml += ::aControls[nI]
-		ENDIF
-	
-	NEXT			
+   FOR nI := 1 TO Len( ::aControls )
 
-RETU cHtml
+      IF ValType( ::aControls[ nI ] ) == 'O'
+         cHtml += ::aControls[ nI ]:Activate()
+      ELSE
+         cHtml += ::aControls[ nI ]
+      ENDIF
+
+   NEXT
+
+   RETU cHtml

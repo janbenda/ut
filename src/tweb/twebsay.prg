@@ -1,126 +1,124 @@
-//	-------------------------------------------------------------
+// -------------------------------------------------------------
 
 CLASS TWebSay FROM TWebControl
 
-	DATA cLink 						INIT '' 
+   DATA cLink       INIT ''
 
-	METHOD New() 					CONSTRUCTOR
-	METHOD Activate()
+   METHOD New()      CONSTRUCTOR
+   METHOD Activate()
 
-
-ENDCLASS 
+ENDCLASS
 
 METHOD New( oParent, cId, cCaption, nGrid, cAlign, cClass, cFont, cLink, cStyle, cAction ) CLASS TWebSay
 
-	DEFAULT cId TO ::GetId()
-	DEFAULT cCaption TO ''
-	DEFAULT nGrid TO 4
-	DEFAULT cAlign TO ''
-	DEFAULT cClass TO ''
-	DEFAULT cFont TO ''
-	DEFAULT cLink TO ''
-	DEFAULT cStyle TO ''
-	DEFAULT cAction TO ''
-	
-	::oParent 		:= oParent
-	::cId			:= cId
-	::uValue		:= cCaption
-	::nGrid			:= nGrid
-	::cAlign 		:= lower( cAlign )
-	::cClass 		:= cClass
-	::cFont 		:= cFont
-	::cLink 		:= cLink
-	::cStyle		:= cStyle
-	::cAction		:= cAction
+   DEFAULT cId TO ::GetId()
+   DEFAULT cCaption TO ''
+   DEFAULT nGrid TO 4
+   DEFAULT cAlign TO ''
+   DEFAULT cClass TO ''
+   DEFAULT cFont TO ''
+   DEFAULT cLink TO ''
+   DEFAULT cStyle TO ''
+   DEFAULT cAction TO ''
 
-	IF Valtype( oParent ) == 'O'	
-		oParent:AddControl( SELF )	
-	ENDIF
+   ::oParent   := oParent
+   ::cId   := cId
+   ::uValue  := cCaption
+   ::nGrid   := nGrid
+   ::cAlign   := Lower( cAlign )
+   ::cClass   := cClass
+   ::cFont   := cFont
+   ::cLink   := cLink
+   ::cStyle  := cStyle
+   ::cAction  := cAction
 
-RETU SELF
+   IF ValType( oParent ) == 'O'
+      oParent:AddControl( SELF )
+   ENDIF
+
+   RETU SELF
 
 METHOD Activate() CLASS TWebSay
 
-	LOCAL cHtml
-	LOCAL cSize 	:= ''
-	local cIdPrefix	
-	local cGrid 
+   LOCAL cHtml
+   LOCAL cSize  := ''
+   LOCAL cIdPrefix
+   LOCAL cGrid
 
-	
-	DO CASE
-		CASE upper(::oParent:cSizing) == 'SM' ;	cSize 		:= 'form-control-sm'			
-		CASE upper(::oParent:cSizing) == 'LG' ;	cSize 		:= 'form-control-lg'			
-	ENDCASE	
-	
-	if !empty( ::oParent:cId_Dialog )
-		cIdPrefix :=  ::oParent:cId_Dialog + '-'
-	else
-		cIdPrefix :=  ''
-	endif		
+   DO CASE
+   CASE Upper( ::oParent:cSizing ) == 'SM' ; cSize   := 'form-control-sm'
+   CASE Upper( ::oParent:cSizing ) == 'LG' ; cSize   := 'form-control-lg'
+   ENDCASE
 
-	//cHtml := '<div class="col-' + ltrim(str(::nGrid)) 
-	
-	if valtype( ::nGrid ) == 'N'
-		cGrid := ltrim(str(::nGrid))
-	else
-		cGrid := ::nGrid	
-	endif
-	
-	cHtml := '<div class="col-' + cGrid
-	
-	cHtml += IF( ::oParent:lDessign, ' tweb_dessign', '') 
-	cHtml += ' tweb_say' 
-	
-	do case
-		case ::cAlign == 'center' ; cHtml += ' text-center'
-		case ::cAlign == 'right'  ; cHtml += ' text-right'
-	endcase
-		
+   IF !Empty( ::oParent:cId_Dialog )
+      cIdPrefix :=  ::oParent:cId_Dialog + '-'
+   ELSE
+      cIdPrefix :=  ''
+   ENDIF
 
-	
-	if !empty( ::cClass )	
-		cHtml += ' ' + ::cClass
-	endif
-	
-	
-	if !empty( ::cFont )	
-		cHtml += ' ' + ::cFont
-	endif	
-	
-	cHtml += '" '
-	cHtml += IF( ::oParent:lDessign, 'style="border:1px solid brown;"', '' ) 
-	cHtml += ' data-group="' + cIdPrefix + ::cId   + '" >'	
-	
-	
-	if !empty( ::cLink )
-		cHtml += '<a href="' + ::cLink + '">'
-		
-	endif
+// cHtml := '<div class="col-' + ltrim(str(::nGrid))
 
-	
-	cHtml += '<span id="' + cIdPrefix + ::cId + '" '
-	
-	
-	if !empty( ::cStyle )	
-		cHtml += ' style="' + ::cStyle + '" '
-	endif	
-	
-	if !empty( ::cAction )		
-		if AT( '(', ::cAction ) >  0 		//	Exist function ?
-			cHtml += 'onclick="' + ::cAction + '" '				
-		else
-			cHtml += ' data-onclick="' + ::cAction + '" '					
-		endif
-	endif 
-	
-	cHtml += ' data-live '
-	
-	cHtml += '>' + ::uValue + '</span>'
-	
-	if !empty( ::cLink )
-		cHtml += '</a>'
-	endif	
+   IF ValType( ::nGrid ) == 'N'
+      cGrid := LTrim( Str( ::nGrid ) )
+   ELSE
+      cGrid := ::nGrid
+   ENDIF
 
-	cHtml += '</div>'
+   cHtml := '<div class="col-' + cGrid
 
-RETU cHtml
+   cHtml += IF( ::oParent:lDessign, ' tweb_dessign', '' )
+   cHtml += ' tweb_say'
+
+   DO CASE
+   CASE ::cAlign == 'center' ; cHtml += ' text-center'
+   CASE ::cAlign == 'right'  ; cHtml += ' text-right'
+   ENDCASE
+
+
+
+   IF !Empty( ::cClass )
+      cHtml += ' ' + ::cClass
+   ENDIF
+
+
+   IF !Empty( ::cFont )
+      cHtml += ' ' + ::cFont
+   ENDIF
+
+   cHtml += '" '
+   cHtml += IF( ::oParent:lDessign, 'style="border:1px solid brown;"', '' )
+   cHtml += ' data-group="' + cIdPrefix + ::cId   + '" >'
+
+
+   IF !Empty( ::cLink )
+      cHtml += '<a href="' + ::cLink + '">'
+
+   ENDIF
+
+
+   cHtml += '<span id="' + cIdPrefix + ::cId + '" '
+
+
+   IF !Empty( ::cStyle )
+      cHtml += ' style="' + ::cStyle + '" '
+   ENDIF
+
+   IF !Empty( ::cAction )
+      IF At( '(', ::cAction ) >  0   // Exist function ?
+         cHtml += 'onclick="' + ::cAction + '" '
+      ELSE
+         cHtml += ' data-onclick="' + ::cAction + '" '
+      ENDIF
+   ENDIF
+
+   cHtml += ' data-live '
+
+   cHtml += '>' + ::uValue + '</span>'
+
+   IF !Empty( ::cLink )
+      cHtml += '</a>'
+   ENDIF
+
+   cHtml += '</div>'
+
+   RETU cHtml

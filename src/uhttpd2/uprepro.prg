@@ -1,13 +1,13 @@
 /*
 **  Original code from modHarbour
 **
-** Developed by Antonio Linares & Carles Aubia 
+** Developed by Antonio Linares & Carles Aubia
 ** MIT license https://github.com/FiveTechSoft/mod_harbour/blob/master/LICENSE
 */
 
 #include "common.ch"
 
-//	------------------------------------------------------------- //
+// ------------------------------------------------------------- //
 
 #define HB_HRB_BIND_DEFAULT      0x0   /* do not overwrite any functions, ignore
                                           public HRB functions if functions with
@@ -37,280 +37,278 @@
 #define HB_HRB_FUNC_LOCAL        0x3   /* locally defined functions */
 #define HB_HRB_FUNC_EXTERN       0x4   /* external functions used in HRB module */
 
-//	------------------------------------------------------------- //
+// ------------------------------------------------------------- //
 
 
 FUNCTION UAddPPRules()
 
-	LOCAL cOs := OS()
-	   
-	thread static hPP 
+   LOCAL cOs := OS()
 
-    IF hPP != nil
-		retu hPP 
-	ENDIF 
-	
-    hPP = __pp_Init()
+THREAD STATIC hPP
 
-    DO CASE
-		CASE "Windows" $ cOs  ; __pp_Path( hPP, "c:\harbour\include" )
-		CASE "Linux" $ cOs   ; __pp_Path( hPP, "~/harbour/include" )
-    ENDCASE
+IF hPP != nil
+RETU hPP
+ENDIF
 
-    IF ! Empty( hb_GetEnv( "HB_INCLUDE" ) )
-        __pp_Path( hPP, hb_GetEnv( "HB_INCLUDE" ) )
-    ENDIF
-	
-   __pp_addRule( hPP, "#xcommand ? [<explist,...>] => UWrite( '<br>' [,<explist>] )" )
-   __pp_addRule( hPP, "#xcommand ?? [<explist,...>] => UWrite( [<explist>] )" )	
-   
-	__pp_addRule( hPP, "#xcommand TEXT [TO] <var> => #pragma __stream|<var> += %s")
-	__pp_addRule( hPP, "#xcommand TEXT [TO] <var> [ PARAMS [<v1>] [,<vn>] ] => " +;
-	      "#pragma __stream|<var> += UInlinePrg( UReplaceBlocks( %s, '<$', '$>' [,<(v1)>][+','+<(vn)>] [, @<v1>][, @<vn>] ) )")
-   
-/*	
-					  //	InitProcess .ch files
-	for n := 1 to len(mh_HashModules())
-	
-		aPair 	:= HB_HPairAt( mh_HashModules(), n )		
-		cExt 	:= lower( hb_FNameExt( aPair[1] ) )
+hPP = __pp_Init()
 
-		if cExt == '.ch' 	
-			__pp_AddRule( hPP, aPair[2] )			
-		endif 
-		
-	next 
+DO CASE
+CASE "Windows" $ cOs  ; __pp_Path( hPP, "c:\harbour\include" )
+CASE "Linux" $ cOs   ; __pp_Path( hPP, "~/harbour/include" )
+ENDCASE
+
+IF ! Empty( hb_GetEnv( "HB_INCLUDE" ) )
+__pp_Path( hPP, hb_GetEnv( "HB_INCLUDE" ) )
+ENDIF
+
+__pp_AddRule( hPP, "#xcommand ? [<explist,...>] => UWrite( '<br>' [,<explist>] )" )
+__pp_AddRule( hPP, "#xcommand ?? [<explist,...>] => UWrite( [<explist>] )" )
+
+__pp_AddRule( hPP, "#xcommand TEXT [TO] <var> => #pragma __stream|<var> += %s" )
+__pp_AddRule( hPP, "#xcommand TEXT [TO] <var> [ PARAMS [<v1>] [,<vn>] ] => " + ;
+      "#pragma __stream|<var> += UInlinePrg( UReplaceBlocks( %s, '<$', '$>' [,<(v1)>][+','+<(vn)>] [, @<v1>][, @<vn>] ) )" )
+
+/*
+       // InitProcess .ch files
+ for n := 1 to len(mh_HashModules())
+
+  aPair  := HB_HPairAt( mh_HashModules(), n )
+  cExt  := lower( hb_FNameExt( aPair[1] ) )
+
+  if cExt == '.ch'
+   __pp_AddRule( hPP, aPair[2] )
+  endif
+
+ next
 */
-	
 
-RETURN hPP
+   RETURN hPP
 
-//	------------------------------------------------------------- //
+// ------------------------------------------------------------- //
 
 FUNCTION UReplaceBlocks( cCode, cStartBlock, cEndBlock, cParams, ... )
 
-	LOCAL nStart, nEnd, cBlock
-	LOCAL lReplaced := .F.   
-	LOCAL uValue 
-	local cError := ''
-	local oError
-	local cCodeInitial := cCode 
-	local cInfoCode := ''
-			
-	hb_default( @cEndBlock, "}}" )
-	hb_default( @cParams, "" )  
-	
-	
-	BEGIN SEQUENCE WITH {|oErr| oError := oErr, Break( oErr ) }
+   LOCAL nStart, nEnd, cBlock
+   LOCAL lReplaced := .F.
+   LOCAL uValue
+   LOCAL cError := ''
+   LOCAL oError
+   LOCAL cCodeInitial := cCode
+   LOCAL cInfoCode := ''
 
-		WHILE ( nStart := At( cStartBlock, cCode ) ) != 0 .AND. ;
-			 ( nEnd := At( cEndBlock, cCode ) ) != 0
-			 
-			cBlock = SubStr( cCode, nStart + Len( cStartBlock ), nEnd - nStart - Len( cEndBlock ) )	  
-			
-			uValue := Eval( &( "{ |" + cParams + "| " + cBlock + " }" ), ... )
-
-			cCode = SubStr( cCode, 1, nStart - 1 ) + ;
-			UValToChar( uValue ) + ;
-			SubStr( cCode, nEnd + Len( cEndBlock ) )		 
-
-			lReplaced = .T.
-		END 
-
-    RECOVER USING oError
-_d( 'Error en prepro--->' )	
-		cInfoCode 	:= UGetInfoCode( oError, cCode )
-		
-		cError 		+= UErrorWeb()			
-		
-		cError 		+= UErrorGetDescription( oError, cInfoCode )			
-		
-		cError 		+= UErrorGetSys()	
-	
-/*	
-	
-		cType := '<b>Error type: </b>Replace Block ' +  cStartBlock + '...' + cEndBlock + '<br>'
-		cType += '<b>Block: </b>' +  cBlock + '<br>'
-	
-		cError += UErrorWeb()			
-		cError += UErrorGetDescription( oError, cType )						
-		cError += UErrorGetCode( cCodeInitial, cBlock )	
-
-			
-		cError += UErrorGetSys()	
-
-*/		
-		
-		cCode := ''
-		//	Aqui he de montar el missatge de Error.....		
-
-		if UIsAjax()		
-			UWrite( cError )
-		else			
-			UWrite( UMsgError( cError ) )
-		endif
-		
-		retu ''
-
-    END SEQUENCE		
-
-RETURN If( hb_PIsByRef( 1 ), lReplaced, cCode )
-//RETURN cCode 
+   hb_default( @cEndBlock, "}}" )
+   hb_default( @cParams, "" )
 
 
-//	------------------------------------------------------------- //
+   BEGIN SEQUENCE WITH {| oErr | oError := oErr, Break( oErr ) }
 
-function UInlinePRG( cText, cParams, ... )
+      WHILE ( nStart := At( cStartBlock, cCode ) ) != 0 .AND. ;
+            ( nEnd := At( cEndBlock, cCode ) ) != 0
 
-	LOCAl BlocA, BlocB
-	LOCAL nStart, nEnd, cCode, cResult
-	local cPreCode 	:= cText
-	local cError := ''
-	local oError
-	local cCodeInitial := cText 	
-	local cCodePP, cPrg, pSym, oHrb
-	local lExit := .f.
+         cBlock = SubStr( cCode, nStart + Len( cStartBlock ), nEnd - nStart - Len( cEndBlock ) )
 
-	local cInfoCode := ''
-	
-	
-	DEFAULT cParams	TO ''	
-	
-	//bError := ERRORBLOCK()
-	
-	//BEGIN SEQUENCE WITH {|oErr| UErrorInlinePrg(oErr, @cError, @cCode ) }
-	BEGIN SEQUENCE WITH {|oErr| oError := oErr, Break( oErr ) }
-	
-		WHILE ( nStart := At( "<?prg", cText ) ) != 0 .and. !lExit
-		
-			nEnd  := At( "?>", SubStr( cText, nStart + 5 ) )
-		  
-			BlocA := SubStr( cText, 1, nStart - 1 )
-			cCode := SubStr( cText, nStart + 5, nEnd - 1 )
-			BlocB := SubStr( cText, nStart + nEnd + 6 )	
+         uValue := Eval( &( "{ |" + cParams + "| " + cBlock + " }" ), ... )
 
+         cCode = SubStr( cCode, 1, nStart - 1 ) + ;
+            UValToChar( uValue ) + ;
+            SubStr( cCode, nEnd + Len( cEndBlock ) )
 
-			//--------------------
-			
-				//	--> OK cResult := UExecInline( cCodePP, cParams, ... ) 
-				//	----------------------
-				//hPP 	:= UAddPPRules()   			
-				//cCodePP	:= __pp_Process( hPP, cCode )	
+         lReplaced = .T.
+      END
 
-				cPrg := "function __Inline( " + cParams + " )" + hb_osNewLine() + cCode
-				oHrb := UCompile( cPrg, @cCodePP )
-				
-				IF ! Empty( oHrb )
-			   
-					//mh_startmutex()
+   RECOVER USING oError
+      _d( 'Error en prepro--->' )
+      cInfoCode  := UGetInfoCode( oError, cCode )
 
-					//pSym := hb_hrbLoad( HB_HRB_BIND_OVERLOAD, oHrb )	  
-					pSym := hb_hrbLoad( HB_HRB_BIND_LOCAL, oHrb )	  
+      cError   += UErrorWeb()
 
-					//mh_endmutex()
+      cError   += UErrorGetDescription( oError, cInfoCode )
 
-					cResult := hb_hrbDo( pSym, ... )
+      cError   += UErrorGetSys()
 
-			   ENDIF										
-			
-			//--------------------
-			
-			IF Valtype( cResult ) != 'C' 
-				//lExit := .t.
-				cResult := UValToChar( cResult )
-			ENDIF		
-		
-			cText 	:= BlocA + cResult + BlocB              
-	 
-		END	
+/*
 
-    RECOVER USING oError
+  cType := '<b>Error type: </b>Replace Block ' +  cStartBlock + '...' + cEndBlock + '<br>'
+  cType += '<b>Block: </b>' +  cBlock + '<br>'
 
-		//	_d( 'Procname 1: ' + procname(1) )		// D'on ve ?
-
-		cText := ''
-
-		if oError:subcode == 666		//	Error provocat
-		
-			cError 		:= UBuildError( oError, UGetFileHtml() )
-	
-		else 
-			cInfoCode 	:= UGetInfoCode( oError, cCode, cCodePP )
-			
-			cError 		+= UErrorWeb()			
-			
-			cError 		+= UErrorGetDescription( oError, cInfoCode )			
-			
-			cError 		+= UErrorGetSys()						
-
-		endif 
-		
-		if UIsAjax()		
-			UWrite( cError )
-		else			
-			UWrite( UMsgError( cError ) )
-		endif
-		
-		retu nil
+  cError += UErrorWeb()
+  cError += UErrorGetDescription( oError, cType )
+  cError += UErrorGetCode( cCodeInitial, cBlock )
 
 
-    END SEQUENCE	
+  cError += UErrorGetSys()
 
-	if lExit
-		return nil //	No podemos usar QUIT 
-	endif	
-	
-RETU cText 
+*/
 
-//	------------------------------------------------------------- //
+      cCode := ''
+// Aqui he de montar el missatge de Error.....
 
-function UBuildError( oError,  cSource )
+      IF UIsAjax()
+         UWrite( cError )
+      ELSE
+         UWrite( UMsgError( cError ) )
+      ENDIF
 
-	local cError 		:= UErrorWeb()	
-	
-	hb_default( @cSource, '' )
-	
-	cError 		+= '<table class="uerrortable">'
-	cError 		+= UErrorLin( 'System', 'UHttpd2 ' + UVersion() ) 
-	cError 		+= IF ( !EMPTY(oError:subsystem), UErrorLin( 'Subsystem', oError:subsystem ), '') 
-	
-	if hb_isfunction( 'TWebVersion' )
-		UErrorLin( 'Version Tweb', eval( &( '{|| TWebVersion()}' ) ) )  		
-	endif
-	
-	cError 		+= IF ( !EMPTY(cSource), UErrorLin( 'Source', cSource ), '') 
-	cError 		+= IF ( !EMPTY(oError:description), UErrorLin( 'Description', oError:description ), '') 
-	
-	cError 		+= '</table>'
-	cError 		+= '</div><hr>'
-			
-retu cError
+      RETU ''
 
-//	------------------------------------------------------------- //
+   END SEQUENCE
 
-function UErrorInlinePrg(oErr, cError, cCode )
-
-	_d( 'UErrorInlinePrg------------->>' )
-	_d( oErr )
-	_d( cCode )
-	
-	cError := oErr:description + '<br>'
-	
-	//	HE DE TREURE POSIBLE TAGS DELS CODE !!!! <li>,<ul>,...
-	
-	cError += 'Code: ' + '<br>' + cCode
-	
-	//UDefError( oErr:description )
-	
-
-	IF oErr != NIL  // Dummy check to avoid unreachable code warning for RETURN NIL
-		BREAK(oErr)
-	ENDIF
-	
-RETURN nil
+   RETURN If( hb_PIsByRef( 1 ), lReplaced, cCode )
+// RETURN cCode
 
 
-//	------------------------------------------------------------- //
+// ------------------------------------------------------------- //
+
+FUNCTION UInlinePRG( cText, cParams, ... )
+
+   LOCAL BlocA, BlocB
+   LOCAL nStart, nEnd, cCode, cResult
+   LOCAL cPreCode  := cText
+   LOCAL cError := ''
+   LOCAL oError
+   LOCAL cCodeInitial := cText
+   LOCAL cCodePP, cPrg, pSym, oHrb
+   LOCAL lExit := .F.
+
+   LOCAL cInfoCode := ''
+
+   DEFAULT cParams TO ''
+
+// bError := ERRORBLOCK()
+
+// BEGIN SEQUENCE WITH {|oErr| UErrorInlinePrg(oErr, @cError, @cCode ) }
+   BEGIN SEQUENCE WITH {| oErr | oError := oErr, Break( oErr ) }
+
+      WHILE ( nStart := At( "<?prg", cText ) ) != 0 .AND. !lExit
+
+         nEnd  := At( "?>", SubStr( cText, nStart + 5 ) )
+
+         BlocA := SubStr( cText, 1, nStart - 1 )
+         cCode := SubStr( cText, nStart + 5, nEnd - 1 )
+         BlocB := SubStr( cText, nStart + nEnd + 6 )
+
+
+// --------------------
+
+// --> OK cResult := UExecInline( cCodePP, cParams, ... )
+// ----------------------
+// hPP  := UAddPPRules()
+// cCodePP := __pp_Process( hPP, cCode )
+
+         cPrg := "function __Inline( " + cParams + " )" + hb_osNewLine() + cCode
+         oHrb := UCompile( cPrg, @cCodePP )
+
+         IF ! Empty( oHrb )
+
+// mh_startmutex()
+
+// pSym := hb_hrbLoad( HB_HRB_BIND_OVERLOAD, oHrb )
+            pSym := hb_hrbLoad( HB_HRB_BIND_LOCAL, oHrb )
+
+// mh_endmutex()
+
+            cResult := hb_hrbDo( pSym, ... )
+
+         ENDIF
+
+// --------------------
+
+         IF ValType( cResult ) != 'C'
+// lExit := .t.
+            cResult := UValToChar( cResult )
+         ENDIF
+
+         cText  := BlocA + cResult + BlocB
+
+      END
+
+   RECOVER USING oError
+
+// _d( 'Procname 1: ' + procname(1) )  // D'on ve ?
+
+      cText := ''
+
+      IF oError:subcode == 666  // Error provocat
+
+         cError   := UBuildError( oError, UGetFileHtml() )
+
+      ELSE
+         cInfoCode  := UGetInfoCode( oError, cCode, cCodePP )
+
+         cError   += UErrorWeb()
+
+         cError   += UErrorGetDescription( oError, cInfoCode )
+
+         cError   += UErrorGetSys()
+
+      ENDIF
+
+      IF UIsAjax()
+         UWrite( cError )
+      ELSE
+         UWrite( UMsgError( cError ) )
+      ENDIF
+
+      RETU NIL
+
+
+   END SEQUENCE
+
+   IF lExit
+      RETURN NIL // No podemos usar QUIT
+   ENDIF
+
+   RETU cText
+
+// ------------------------------------------------------------- //
+
+FUNCTION UBuildError( oError,  cSource )
+
+   LOCAL cError   := UErrorWeb()
+
+   hb_default( @cSource, '' )
+
+   cError   += '<table class="uerrortable">'
+   cError   += UErrorLin( 'System', 'UHttpd2 ' + UVersion() )
+   cError   += IF ( !Empty( oError:subsystem ), UErrorLin( 'Subsystem', oError:subsystem ), '' )
+
+   IF hb_IsFunction( 'TWebVersion' )
+      UErrorLin( 'Version Tweb', Eval( &( '{|| TWebVersion()}' ) ) )
+   ENDIF
+
+   cError   += IF ( !Empty( cSource ), UErrorLin( 'Source', cSource ), '' )
+   cError   += IF ( !Empty( oError:description ), UErrorLin( 'Description', oError:description ), '' )
+
+   cError   += '</table>'
+   cError   += '</div><hr>'
+
+   RETU cError
+
+// ------------------------------------------------------------- //
+
+FUNCTION UErrorInlinePrg( oErr, cError, cCode )
+
+   _d( 'UErrorInlinePrg------------->>' )
+   _d( oErr )
+   _d( cCode )
+
+   cError := oErr:description + '<br>'
+
+// HE DE TREURE POSIBLE TAGS DELS CODE !!!! <li>,<ul>,...
+
+   cError += 'Code: ' + '<br>' + cCode
+
+// UDefError( oErr:description )
+
+
+   IF oErr != NIL  // Dummy check to avoid unreachable code warning for RETURN NIL
+      Break( oErr )
+   ENDIF
+
+   RETURN NIL
+
+
+// ------------------------------------------------------------- //
 
 FUNCTION UExecInline( cCode, cParams, ... )
 
@@ -318,60 +316,60 @@ FUNCTION UExecInline( cCode, cParams, ... )
       cParams = ""
    ENDIF
 
+   RETURN UExecute( "function __Inline( " + cParams + " )" + hb_osNewLine() + cCode, ... )
 
-RETURN UExecute( "function __Inline( " + cParams + " )" + hb_osNewLine() + cCode, ... )
- 
-//	------------------------------------------------------------- //
+// ------------------------------------------------------------- //
 
 FUNCTION UExecute( cCode, ... )
 
-	local oHrb := UCompile( cCode, ... )	
-	local pSym, uRet 	
+   LOCAL oHrb := UCompile( cCode, ... )
+   LOCAL pSym, uRet
 
-	IF ! Empty( oHrb )
-   
-		//mh_startmutex()
+   IF ! Empty( oHrb )
 
-		//pSym := hb_hrbLoad( HB_HRB_BIND_OVERLOAD, oHrb )	  
-		pSym := hb_hrbLoad( HB_HRB_BIND_LOCAL, oHrb )	  
+// mh_startmutex()
 
-		//mh_endmutex()
+// pSym := hb_hrbLoad( HB_HRB_BIND_OVERLOAD, oHrb )
+      pSym := hb_hrbLoad( HB_HRB_BIND_LOCAL, oHrb )
 
-		uRet := hb_hrbDo( pSym, ... )
+// mh_endmutex()
+
+      uRet := hb_hrbDo( pSym, ... )
 
    ENDIF
 
-retu uRet 
+   RETU uRet
 
-//	------------------------------------------------------------- //
+// ------------------------------------------------------------- //
 
-function UCompile( cCode, cCodePP )
+FUNCTION UCompile( cCode, cCodePP )
 
-	local oHrb
-	local hPP
-	LOCAL cOs   		:= OS()
-	LOCAL cHBHeader  	:= ''		
+   LOCAL oHrb
+   LOCAL hPP
+   LOCAL cOs     := OS()
+   LOCAL cHBHeader   := ''
 
-	DEFAULT cCodePP TO ''
+   DEFAULT cCodePP TO ''
 
-	DO CASE
-		CASE "Windows" $ cOs  ; cHBHeader := "c:\harbour\include"
-		CASE "Linux" $ cOs   ; cHBHeader := "~/harbour/include"
-	ENDCASE   
+   DO CASE
+   CASE "Windows" $ cOs  ; cHBHeader := "c:\harbour\include"
+   CASE "Linux" $ cOs   ; cHBHeader := "~/harbour/include"
+   ENDCASE
 
-	hPP := UAddPPRules()   
+   hPP := UAddPPRules()
 
-	UReplaceBlocks( @cCode, "{%", "%}" )   
+   UReplaceBlocks( @cCode, "{%", "%}" )
 
-	cCodePP := __pp_Process( hPP, cCode )
+   cCodePP := __pp_Process( hPP, cCode )
 
-	oHrb = HB_CompileFromBuf( cCodePP, .T., "-n", "-q2", "-I" + cHBheader, ;
-			"-I" + hb_GetEnv( "HB_INCLUDE" ), hb_GetEnv( "HB_USER_PRGFLAGS" ) )	
+   oHrb = HB_CompileFromBuf( cCodePP, .T., "-n", "-q2", "-I" + cHBheader, ;
+      "-I" + hb_GetEnv( "HB_INCLUDE" ), hb_GetEnv( "HB_USER_PRGFLAGS" ) )
 
 
-retu oHrb
+   RETU oHrb
 
-//	------------------------------------------------------------- //
+// ------------------------------------------------------------- //
 
-function Uvaltochar( u ) 
-retu HB_VALTOSTR( u )
+FUNCTION Uvaltochar( u )
+
+   RETU hb_ValToStr( u )
