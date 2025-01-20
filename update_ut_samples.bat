@@ -9,11 +9,7 @@ if exist c:\ut.samples (
 :copy 
 
 @echo +--------------------------------------
-@echo UT update last version to c:\ut.samples 
-@echo This process will update:
-@echo    c:\ut.samples\basic
-@echo    c:\ut.samples\basic.ssl
-@echo    c:\ut.samples\full
+@echo Update example...
 @echo +--------------------------------------
 @echo +
 pause
