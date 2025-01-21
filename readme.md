@@ -8,7 +8,6 @@ Library for Harbour. The easiest way to create screens on the web using commands
 Libreria para Harbour. La manera mas facil de crear pantallas en la web usando sintaxis de comandos
 
 UT usa la siguiente estructura básica para poder crear tu propio servidor
-
 <code>
 +-App
   +--files 
@@ -17,10 +16,10 @@ UT usa la siguiente estructura básica para poder crear tu propio servidor
   +--lib  
 </code>
 
-\lib se encuentra las librerías harbour para compilar
-\files hay las librerías javascript (complementa el sistema)
-\app pondremos todo nuestro código prg que se compilara junto a nuestro servidor
-\html habrá el código donde definamos nuestras vistas (pantallas)
+\lib se encuentra las librerías harbour para compilar 
+\files hay las librerías javascript (complementa el sistema) 
+\app pondremos todo nuestro código prg que se compilara junto a nuestro servidor 
+\html habrá el código donde definamos nuestras vistas (pantallas) 
 
 Los diferentes archivos bat te ayudaran a crear las diferentes versiones de las  librerías.
 
