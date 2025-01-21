@@ -1,4 +1,4 @@
-﻿![alt text](https://github.com/carles9000/ut/blob/main/files/images/ut.png)
+﻿![alt text](https://github.com/carles9000/ut/blob/main/files/images/ut_ico.png)
 
 UT - UHttpd2 & TWeb
 ====================
