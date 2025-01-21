@@ -1,5 +1,4 @@
 ﻿![alt text](https://github.com/carles9000/ut/blob/main/files/images/ut_ico.png)
-
 UT for Harbour
 ==============
 
@@ -16,10 +15,16 @@ UT usa la siguiente estructura básica para poder crear tu propio servidor
   +--lib  
 </code>
 
+<pre>
 \lib se encuentra las librerías harbour para compilar 
+
 \files hay las librerías javascript (complementa el sistema) 
+
 \app pondremos todo nuestro código prg que se compilara junto a nuestro servidor 
+
 \html habrá el código donde definamos nuestras vistas (pantallas) 
+</pre>
+
 
 Los diferentes archivos bat te ayudaran a crear las diferentes versiones de las  librerías.
 
