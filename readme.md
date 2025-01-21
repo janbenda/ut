@@ -17,5 +17,5 @@ Puedes bajarte del repositorio…. Versiones de harbour compiladas para msvc64 y
 Una vez creadas las librerías tu puedes usar el repositorio ut.examples donde se encuentran numerosos ejemplos para poder testear 
 
 
-<hr>
+
 ![alt text](https://github.com/carles9000/ut/blob/main/files/images/harbour_mini.png)
