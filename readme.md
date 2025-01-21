@@ -9,11 +9,13 @@ Libreria para Harbour. La manera mas facil de crear pantallas en la web usando s
 
 UT usa la siguiente estructura básica para poder crear tu propio servidor
 
+<code>
 +-App
   +--files 
   +--app 
   +--html  
   +--lib  
+</code>
 
 \lib se encuentra las librerías harbour para compilar
 \files hay las librerías javascript (complementa el sistema)
