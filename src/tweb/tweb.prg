@@ -116,7 +116,7 @@ METHOD Activate() CLASS TWeb
       cHtml  += '<html lang="' + ::cLang + '">' + CRLF
       cHtml  += '<head>' + CRLF
       cHtml  += '<title>' + ::cTitle + '</title>' + CRLF
-      cHtml += '<meta charset="' + ::cCharset + '">' + CRLF
+      cHtml  += '<meta charset="' + ::cCharset + '">' + CRLF
       cHtml  += '<meta http-equiv="X-UA-Compatible" content="IE=edge">' + CRLF
       cHtml  += '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">' + CRLF
       cHtml  += '<link rel="shortcut icon" type="image/png" href="{{ hb_GetEnv( "ROOTRELATIVE") }}' + ::cIcon + '"/>' + CRLF

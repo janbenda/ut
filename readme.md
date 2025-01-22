@@ -3,19 +3,23 @@
 UT for Harbour
 ==============
 
-Library for Harbour. The easiest way to create screens on the web using commands syntax
+UT is a Harbour framework for programming the web using an easy and intuitive xBase-style syntax. 
+It is a new scenario in which we define a new way of working on the web.
+
+If you need a version of Harbour that suits your project, you can use the version used for the project.
+
+https://github.com/carles9000/ut.harbour 
 
 <hr>
-Libreria para Harbour. La manera mas fácil de crear pantallas en la web usando sintaxis de comandos
 
-Los diferentes archivos bat te ayudaran a crear las diferentes versiones de las  librerías.
+UT es un framework Harbour para programar la web utilizando una sintaxis estilo xBase 
+fácil e intuitiva. Es un nuevo escenario en el que definimos una nueva forma de trabajar en la web.
 
-UT esta probado para ejecutarse con los compiladores msvc64 y mingw64 
+Si necesita una version de Harbour que se adapte al proyecto puedes usar la versión usada para el proyecto 
 
-Puedes bajarte del repositorio…. Versiones de harbour compiladas para msvc64 y mingw64. Son las que se han usado para este proyecto.
-
-Una vez creadas las librerías tu puedes usar el repositorio ut.examples donde se encuentran numerosos ejemplos para poder testear 
+https://github.com/carles9000/ut.harbour
 
 
+<hr> 
 
 ![alt text](https://github.com/carles9000/ut/blob/main/files/images/harbour_mini.png)
