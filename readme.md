@@ -27,4 +27,4 @@ fácil e intuitiva. Es un nuevo escenario en el que definimos una nueva forma de
 
 <hr> 
 
-![alt text](https://github.com/carles9000/ut/blob/main/files/images/harbour_mini.png))
+![alt text](https://github.com/carles9000/ut/blob/main/files/images/harbour_mini.png)
