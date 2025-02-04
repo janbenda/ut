@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h2>Request Data</h2>
+<hr>
+
+<?prg 
+	local cName  := PValue( 1 )
+	local cToken := PValue( 2 )
+	local cHtml  := ''
+	
+	cHtml := 'User Name: ' + cName
+	cHtml += '<br>Token: ' + cToken
+	
+	retu cHtml
+?>
+
+<hr>
+<a href="/">Index</a>
+
+</body>
+</html>

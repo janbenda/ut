@@ -18,6 +18,8 @@
 #xcommand CSS <oForm> => #pragma __cstream| <oForm>:Html( '<style>' + %s + '</style>' )
 
 #xcommand TEXT TO <var> => #pragma __stream|<var> += %s
+#xcommand TEXT TO <var> PARAMS [<v1>] [,<vn>] => #pragma __cstream|<var> += UInlinePrg( UReplaceBlocks( %s, '<$', "$>" [,<(v1)>][+","+<(vn)>] [, @<v1>][, @<vn>] ) )
+
 #xcommand CODE TO <var> => #pragma __stream|<var> += %s
 
 #xcommand HTML <o> => #pragma __cstream| <o>:Html( %s )

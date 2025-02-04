@@ -1,0 +1,28 @@
+#include 'lib/tweb/tweb.ch'
+
+function MyIndex()
+
+	local cHtml := ''
+	
+	TEXT TO cHtml 
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>HTML Forms</h2>
+
+<form action="mycontroller" method="GET">
+  <label>First name:</label><br>
+  <input name="first" value="John"><br>
+  <label Last name:</label><br>
+  <input name="last" value="Doe"><br><br>
+  <input type="submit" value="Submit">
+</form> 
+
+<p>If you click the "Submit" button, the form-data will be sent to a controller name "mycontroller".</p>
+
+</body>
+</html>		
+	ENDTEXT
+
+retu cHtml 

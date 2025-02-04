@@ -69,7 +69,7 @@ REQUEST __vmCountThreads
   HTTP Made Really Easy (http://www.jmarshall.com/easy/http/)
 */
 
-#define HTTPD2_VERSION     '2.00'
+#define HTTPD2_VERSION     '2.01'
 
 #define THREAD_COUNT_PREALLOC     10
 #define THREAD_COUNT_MAX         200
@@ -91,9 +91,6 @@ REQUEST __vmCountThreads
 
 // No debug
 // #xtranslate QOUT([<x,...>]) =>
-
-
-
 
 STATIC oServer
 STATIC hCfg
@@ -3095,114 +3092,115 @@ FUNCTION UErrorWeb()
    LOCAL cStyle := ''
 
    TEXT TO cStyle
-   <html >
-   <head >
-   <title > UT Error < / title >
-   <link rel = "icon" type = "image/x-icon" href = "files/uhttpd2/images/favicon.ico" >
+   <html>
+   <head>
+     <title> UT Error </title>
+     <link rel="icon" type="image/x-icon" href="files/uhttpd2/images/favicon.ico" >
+     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" rel="stylesheet" >
+   </head>
+   <style>
 
-   <!-- < link href = "https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" rel = "stylesheet" > -->
-   < /head >
-   <style >
-
+   body { margin:20px }
+   
    .uerrorcontent {
-   padding: 5px;
-      padding - top: 0;
-      }
+      padding: 5px;
+      padding-top: 0;
+    }
 
    .uerrorcontent pre {
-   margin - top: 0px;
-      }
+	  margin-top: 0px;
+    }
 
 
 
    .uerrorcode {
-   border: 1px solid black;
+      border: 1px solid black;
       overflow:auto;
-      box - shadow: 5px 5px 5px gray;
-      }
+      box-shadow: 5px 5px 5px gray;
+    }
 
    .uerrortable {
-   width:100 % ;
-      }
+      width:100 % ;
+    }
 
    .uerrortablelabel {
-   width: 0;
-      min - width: fit - content;
-      padding - right: 10px;
-      font - weight: bold !important;
-      }
+      width: 0;
+      min-width: fit-content;
+      padding-right: 10px;
+      font-weight: bold !important;
+    }
 
    .uerrortablefont {
-   font - family: system - ui, - apple - system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans - serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-      font - size: 1rem;
-      font - weight: 400;
-      }
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+      font-size: 1rem;
+      font-weight: 400;
+    }
 
    .uerrortitle {
-   padding - left: 5px;
-      background - color: gray;
+      padding-left: 5px;
+      background-color: gray;
       color: white;
-      border - bottom: 1px solid black;
-      font - family: arial;
-      font - size: 14px;
-      }
+      border-bottom: 1px solid black;
+      font-family: arial;
+      font-size: 14px;
+    }
 
    .uerrorsource {
-   position: relative;
+      position: relative;
       bottom: 10px;
       top: 0px;
-      height: 100 % ;
+      height: 100% ;
       padding: 5px;
       left: 0;
       right: 0;
-      }
+    }
 
    .uerrorsource pre {
-   margin - top:0;
-      margin - bottom:0;
-      }
+      margin-top:0;
+      margin-bottom:0;
+    }
 
 
    .uerrorsys {
-/*position: absolute;*/
-   bottom: 0;
-      border - top: 1px solid gray;
-      width: 100 % ;
+      bottom: 0;
+      border-top: 1px solid gray;
+      width: 100% ;
       padding: 5px;
-      font - size: small;
-      box - sizing: border - box;
-      background - color: white;
+      font-size: small;
+      box-sizing: border-box;
+      background-color: white;
       left: 0;
-      }
+    }
 
    .uerrortitletop {
-   font - family: Verdana;
-      margin - bottom:5px;
-      }
+      font-family: Verdana;
+      margin-bottom:5px;
+    }
+	
+   .uerrortitletop span {
+		margin-left: 10px;
+		line-height: 30px;	
+	}
 
    .uerrorimg {
-   width: 30px;
+      width: 30px;
       margin - top: - 4px;
       margin - right: 5px;
       float: left;
-      }
+    }
 
-   < /style >
-   <body >
+   </style>
+   <body>
    ENDTEXT
 
 
    IF ! UIsAjax()
-// cStyle += '<h3 class="uerrortitletop"><img class="uerrorimg" src="files\uhttpd2\images\error.png">System Error</h3><hr>'
-      cStyle += '<h3 class="uerrortitletop"><img class="uerrorimg" src="data:image/png;base64, ' + UImgAlert() + '">System Error</h3><hr>'
+      cStyle += '<h3 class="uerrortitletop"><img class="uerrorimg" src="data:image/png;base64, ' + UImgAlert() + '"><span>System Error</span></h3><hr>'
       cStyle += '<div class="uerrorcontent" style="padding:5px;">'
    ELSE
       cStyle += '<div class="uerrorcontent" style="padding:0px;">'
    ENDIF
-
-
-
-
+   
    RETU cStyle
 
 FUNCTION UErrorLin( cLabel, cValue )
@@ -3275,14 +3273,14 @@ FUNCTION UErrorGetDescription( oErr, cInfoCode, cCargo )
             At( '(b)UHTTPD2_ROUTE', cProc ) > 0
          lExit := .T.
       ELSE
-         cStack += '&nbsp;&nbsp;' + cProc + "(" + LTrim( Str( ProcLine( nI ) ) ) + ")" + cNewLine
+         cStack += cProc + "(" + LTrim( Str( ProcLine( nI ) ) ) + ")" + cNewLine
       ENDIF
 
    ENDDO
 
-   IF !Empty( cStack ) .AND. oErr:subcode != 100
-      cRet += UErrorLin( 'Stack', cStack )
-   ENDIF
+   //IF !Empty( cStack ) .AND. oErr:subcode != 100
+   //   cRet += UErrorLin( 'Stack', cStack )
+   //ENDIF
 
 // ---------------------------------------------------
 

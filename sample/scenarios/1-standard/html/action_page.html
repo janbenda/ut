@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h2>Request Data</h2>
+<hr>
+
+<?prg 
+	local hGet := UGet()
+	local cHtml := ''
+	
+	cHtml := 'First: ' + hGet[ 'first' ]
+	cHtml += '<br>Last: ' + hGet[ 'last' ]	
+	
+	retu cHtml
+?>
+
+<hr>
+<a href="index.html">Index</a>
+
+</body>
+</html>
