@@ -53,7 +53,6 @@ REQUEST __vmCountThreads
 #include "error.ch"
 #include "hbsocket.ch"
 #include "hbthread.ch"
-#include "FileIO.ch"
 
 #ifndef NO_SSL
 #include "hbssl.ch"

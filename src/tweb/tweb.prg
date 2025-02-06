@@ -90,7 +90,7 @@ METHOD New( cTitle, cIcon, lTables, cCharset,  cPathTpl ) CLASS TWeb
 
 
    DEFAULT cIcon    TO 'files/images/ut.ico'
-   DEFAULT cPathTpl   TO hb_DirBase() + 'files\tweb\tpl\'
+   DEFAULT cPathTpl   TO hb_DirBase() + 'files/tweb/tpl/'
 
    ::cTitle  := cTitle
    ::cIcon  := cIcon

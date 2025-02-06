@@ -12,7 +12,11 @@
 function _d( ... )
 
 #ifdef __DEBUGVIEW
-	retu WAPI_OutputDebugString( MH_Out( 'dbg', ... ) )	
+        #ifdef __PLATFORM__WINDOWS
+		retu WAPI_OutputDebugString( MH_Out( 'dbg', ... ) )	
+        #else
+		retu TraceLog( MH_Out( 'dbg', ... ) )	
+        #endif
 #else
 	retu ""
 #endif
@@ -22,7 +26,11 @@ function _d( ... )
 function _t( ... )
 
 #ifdef __DEBUGVIEW
-	retu WAPI_OutputDebugString( MH_Out( 'trace', ... ) )	
+        #ifdef __PLATFORM__WINDOWS
+		retu WAPI_OutputDebugString( MH_Out( 'trace', ... ) )	
+	#else
+		retu TraceLog( MH_Out( 'trace', ... ) )	
+	#endif
 #else
 	retu ""
 #endif
