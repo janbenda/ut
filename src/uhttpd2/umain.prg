@@ -281,7 +281,7 @@ METHOD SetCertificate( PrivateKeyFilename, CertificateFilename ) CLASS UHttpd2
 METHOD SetErrorStatus( nStatus, cPage, cAjax ) CLASS UHttpd2
 
    hb_default( @nStatus, 0 )  // 404
-   hb_default( @cPage, '' )  // error\404.html
+   hb_default( @cPage, '' )  // error/404.html
    hb_default( @cAjax, '' )  // 'page not found !'
 
    AAdd( ::aConfig[ 'ErrorStatus' ], { 'status' => nStatus, 'page' => cPage, 'ajax' => cAjax } )
@@ -2095,7 +2095,7 @@ STATIC FUNCTION MakeResponse()
             cFile := aErrorStatus[ nPos ][ 'page' ]
          ENDIF
 
-         IF File( UGetServer():cPathHtml + '\'  + cFile )
+         IF File( UGetServer():cPathHtml + '/'  + cFile )
             s_cResult := ULoadHtml( cFile )
          ELSE
             s_cResult := cFile
@@ -2846,7 +2846,7 @@ FUNCTION ULoadHtml( cFileHtml, ... )
 // hb_default( @lPathRelative, .T. )
 
 // if lPathRelative
-   cFile  := UGetServer():cPathHtml + '\'  + cFileHtml
+   cFile  := UGetServer():cPathHtml + '/'  + cFileHtml
 // else
 // cFile  := cFileHtml
 // endif
