@@ -17,7 +17,7 @@
 -gc2
 
 -DNO_SSL
--D__DEBUGVIEW
+#-D__DEBUGVIEW
 
 
 # files

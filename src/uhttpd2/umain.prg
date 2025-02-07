@@ -68,7 +68,7 @@ REQUEST __vmCountThreads
   HTTP Made Really Easy (http://www.jmarshall.com/easy/http/)
 */
 
-#define HTTPD2_VERSION     '2.01'
+#define HTTPD2_VERSION     '2.02'
 
 #define THREAD_COUNT_PREALLOC     10
 #define THREAD_COUNT_MAX         200
@@ -2845,11 +2845,14 @@ FUNCTION ULoadHtml( cFileHtml, ... )
 
 // hb_default( @lPathRelative, .T. )
 
-// if lPathRelative
+
+
+#ifdef __PLATFORM__WINDOWS
    cFile  := UGetServer():cPathHtml + '/'  + cFileHtml
-// else
-// cFile  := cFileHtml
-// endif
+#else 
+   cFile  := StrTran( cFileHtml, '\',  '/' )
+   cFile  := UGetServer():cPathHtml + '/' + cFile
+#endif
 
 
    IF File( cFile )
@@ -2874,7 +2877,7 @@ FUNCTION ULoadHtml( cFileHtml, ... )
 
    ELSE
 
-      UDo_Error( 'ULoadHtml() File not found ' + cFileHtml, NIL, 100 )
+      UDo_Error( 'ULoadHtml() File not found... ' + cFileHtml, NIL, 100 )
 
    ENDIF
 

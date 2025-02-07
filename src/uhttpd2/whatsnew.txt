@@ -1,3 +1,9 @@
+Vrs. 2.2
+========
+- UT  to GNU/Linux, Thanks Mr. Riztan
+
+Vrs. 2.1
+========
 - Add UGetInfoSSL() -> hInfo
 - Bug Route. The regular expression did not evaluate correctly. It evaluated, for example, "hello" as well as "wndhello"
 
