@@ -1,3 +1,7 @@
+Vrs. 2.2
+========
+- UT to GNU/Linux, Thanks Mr. Riztan
+
 Vrs. 2.01
 =========
 + Add samples/scenarios
