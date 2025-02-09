@@ -181,7 +181,7 @@ CLASS USessions
    METHOD AllData()    INLINE if( hb_HHasKey( ::hSession, 'data' ), ::hSession[ 'data'   ], { => } )
 
    METHOD NewId()     INLINE hb_MD5( DToS( Date() ) + Time() + Str( hb_Random(), 15, 12 ) )
-   METHOD SessionFile()   INLINE if( Empty( ::cSID ), '', ::cPath + '\' + ::cPrefix + ::cSID )
+   METHOD SessionFile()   INLINE if( Empty( ::cSID ), '', ::cPath + '/' + ::cPrefix + ::cSID )
 
    METHOD Garbage()
 
@@ -224,7 +224,7 @@ METHOD Init() CLASS USessions
 
    IF ! Empty( ::cSID )
 
-      cFile := ::cPath + '\' + ::cPrefix + ::cSID
+      cFile := ::cPath + '/' + ::cPrefix + ::cSID
 
       lNew := if( ::Validate(), .F., .T. )
 

@@ -1,3 +1,8 @@
+Vrs. 2.2a
+=========
+* Updated sessions module to linux
+* Updated websockets module to linux 
+
 Vrs. 2.2
 ========
 - UT to GNU/Linux, Thanks Mr. Riztan

@@ -1190,7 +1190,7 @@ FUNCTION UWS_Define( cScope, cToken, cOnOpen, cOnMessage, cOnClose, cOnError, lC
       CODE TO cJs
       <script >
       CONSOLE.error( 'WS >> Error initializating...'  )
-      < /script >
+      </script>
       ENDTEXT
 
       RETU cJs
@@ -1263,7 +1263,7 @@ FUNCTION UWS_Define( cScope, cToken, cOnOpen, cOnMessage, cOnClose, cOnError, lC
    UWS_Init();
       } )
 
-   < /script >
+   </script>
 
    ENDTEXT
 
