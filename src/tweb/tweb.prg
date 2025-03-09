@@ -89,7 +89,7 @@ METHOD New( cTitle, cIcon, lTables, cCharset,  cPathTpl ) CLASS TWeb
    DEFAULT cCharSet  TO 'UTF-8'   // 'ISO-8859-1'
 
 
-   DEFAULT cIcon    TO 'files/images/ut.ico'
+   DEFAULT cIcon    TO 'files/images/ut_ico.png'
    DEFAULT cPathTpl   TO hb_DirBase() + 'files/tweb/tpl/'
 
    ::cTitle  := cTitle

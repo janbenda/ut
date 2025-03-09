@@ -1,3 +1,10 @@
+Vrs. 2.3
+========
+* Updated libs to Harbour 3.2.0dev (r2502211016)
+* NOTE: In order to correctly use UT with Curl and SSL, 
+  you must use the latest version of Harbour (2025) 
+  which updates to the latest versions of Curl and OpenSSL
+
 Vrs. 2.2a
 =========
 * Updated sessions module to linux

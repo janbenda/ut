@@ -1,5 +1,5 @@
 #define CRLF                       (CHR(13)+CHR(10))
-#define DEPTH_LEVEL	  5
+#define DEPTH_LEVEL	  8
 
 #xcommand DEFAULT <v1> TO <x1> [, <vn> TO <xn> ] ;
 => IF <v1> == NIL ; <v1> := <x1> ; END [; IF <vn> == NIL ; <vn> := <xn> ; END ]
@@ -11,15 +11,15 @@
 
 function _d( ... )
 
-#ifdef __DEBUGVIEW
+//#ifdef __DEBUGVIEW
         #ifdef __PLATFORM__WINDOWS
 		retu WAPI_OutputDebugString( MH_Out( 'dbg', ... ) )	
         #else
 		retu TraceLog( MH_Out( 'dbg', ... ) )	
         #endif
-#else
-	retu ""
-#endif
+//#else
+//	retu ""
+//#endif
 
 //	--------------------------------------------------------- //
 

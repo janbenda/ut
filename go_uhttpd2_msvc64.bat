@@ -1,7 +1,12 @@
 @echo off
 call "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" amd64
 
-c:\harb\msvc64\bin\hbmk2 uhttpd2.hbp -comp=msvc64
+set hbdir=c:\harbour
+set include=%include%;%hbdir%\include
+set lib=%lib%;%hbdir%\lib\win\msvc64
+set path=%path%;path c:\windows\system32;c:\windows;%hbdir%;%hbdir%\bin
+
+hbmk2 uhttpd2.hbp -comp=msvc64
 
 if errorlevel 1 goto compileerror
 

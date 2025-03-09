@@ -16,15 +16,20 @@ app\myapi.prg
 -Llib\tweb\msvc64
 -ltweb
 
--lhbssl
--lhbssls
--llibcrypto-1_1-x64
--llibssl-1_1-x64
-
-
 # WAPI_OutputDebugString()
 -lhbwin
 -lxhb
 -lhbct
 
-hbcurl.hbc 
+# CURL
+hbcurl.hbc
+ 
+# OpensSSL
+-lhbssl
+-lhbssls
+-llibcrypto-3-x64
+-llibssl-3-x64 
+ 
+-ldflag=/NODEFAULTLIB:libucrt
+-ldflag=/NODEFAULTLIB:msvcrt
+-lucrt

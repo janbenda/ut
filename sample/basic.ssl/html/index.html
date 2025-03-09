@@ -13,6 +13,9 @@
 			SAY VALUE '<h4>Version {{ Version() }}' ALIGN 'center' GRID 12  OF o
 			SAY VALUE '<h4>Version UT {{ UVersion() }}' ALIGN 'center' GRID 12  OF o									
 			SAY VALUE '<h4>Version TWeb {{ TWebVersion() }}<hr>' ALIGN 'center' GRID 12  OF o									
+			SAY VALUE '<h4>OpenSSL Version {{ OpenSSL_version() }}' ALIGN 'center' GRID 12  OF o									
+			SAY VALUE '<h4>CURL Version {{ Curl_Version() }}<hr>' ALIGN 'center' GRID 12  OF o									
+			
 			
 			BUTTON ID 'btn' LABEL 'Click me!' ALIGN 'center' GRID 12 ACTION 'clickme' OF o
 		ENDFORM o			

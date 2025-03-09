@@ -2,7 +2,7 @@
 #include "hbclass.ch"
 #include "hbsocket.ch"
 
-#define UWS_VERSION  '1.00'
+#define UWS_VERSION  '1.01'
 
 #xcommand CODE TO <var> [ PARAMS [<v1>] [,<vn>] ] => #pragma __stream|<var> += UReplaceBlocks( %s, '<$', "$>" [,<(v1)>][+","+<(vn)>] [, @<v1>][, @<vn>] )
 
@@ -332,6 +332,7 @@ STATIC FUNCTION  ClientConnection( hSocket, oWS )
    LOCAL nIni, nEnd, cParameters, cPart, hParameters, nI, lValidate
    LOCAL uValue, cType, cValType, lAuth, hClient, aI, cScope
    LOCAL hParClient := { 'scope' => '', 'token' => '' }
+   LOCAL lError, oError 
 
 
 #ifndef NO_SSL
@@ -625,30 +626,46 @@ STATIC FUNCTION  ClientConnection( hSocket, oWS )
 // USocketGarbage()    // IMPORTANTISIMA !!! Sino CPU almacena Sockets vacios que ocupan mucha memoria
 
    _traceSys( '>> ClientConnection > Init Loop accept socket request...'  )
-
-   WHILE .T.
+	
+	lError := .F.
+	
+   WHILE .T. .and. !lError
       cRequest = ""
       nLen = 1
 
       WHILE nLen > 0
 
          cBuffer := Space( 4096 )
+		 
+		 TRY
 
-#ifndef NO_SSL
-         nLen := MY_SSL_READ( hSSL, hSocket, @cBuffer, TIMEOUT, @nErr )
-#else
-         nLen := hb_socketRecv( hSocket, @cBuffer,,, TIMEOUT )
-#endif
+			#ifndef NO_SSL
+				nLen := MY_SSL_READ( hSSL, hSocket, @cBuffer, TIMEOUT, @nErr )
+			#else
+				nLen := hb_socketRecv( hSocket, @cBuffer,,, TIMEOUT )
+			#endif
+			
+		 CATCH oError 
+			
+			lError 		:= .T. 
+			nLen 		:= 0
+			cRequest 	:= ''
+			
+			_traceSys(  'WS Error (101): ' + oError:description )
+
+		 END
+		
 
 // _d( 'ERROR: ' + str( hb_socketGetError() ) )
 
-
-         IF  nLen > 0
-            cRequest += Left( cBuffer, nLen )
-         ELSE
-            IF nLen == -1 .AND. hb_socketGetError() == HB_SOCKET_ERR_TIMEOUT
-               nLen = 0
-            ENDIF
+		 IF !lError 
+			 IF  nLen > 0
+				cRequest += Left( cBuffer, nLen )
+			 ELSE
+				IF nLen == -1 .AND. hb_socketGetError() == HB_SOCKET_ERR_TIMEOUT
+				   nLen = 0
+				ENDIF
+			 ENDIF
          ENDIF
 
       END
@@ -872,8 +889,16 @@ STATIC FUNCTION  ClientConnection( hSocket, oWS )
 
    _traceSys( '>> ClientConnection > Close socket' )
 
-   ClientClose( hSocket, cUser )
-
+   IF !lError 
+   
+	   TRY 
+			ClientClose( hSocket, cUser )		
+	   CATCH oError 
+			_traceSys( 'Error (102): ' + oError:description  )              
+	   END
+	   
+   ENDIF
+	
    RETURN NIL
 
 // ----------------------------------------------------------------//

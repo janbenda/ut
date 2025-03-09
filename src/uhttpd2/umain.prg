@@ -2,7 +2,7 @@
  * HTTPD2
  *
  * Copyright 2007 Mindaugas Kavaliauskas <dbtopas at dbtopas.lt>
- * Adapted 2022-2024 Carles Aubia <carles9000 at gmail.com> for UT Project
+ * Adapted 2022-2025 Carles Aubia <carles9000 at gmail.com> for UT Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,7 +68,7 @@ REQUEST __vmCountThreads
   HTTP Made Really Easy (http://www.jmarshall.com/easy/http/)
 */
 
-#define HTTPD2_VERSION     '2.02a'
+#define HTTPD2_VERSION     '2.3'
 
 #define THREAD_COUNT_PREALLOC     10
 #define THREAD_COUNT_MAX         200

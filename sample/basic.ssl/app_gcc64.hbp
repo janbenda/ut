@@ -1,4 +1,3 @@
--oapp.gbin{gcc}
 -n
 -w1
 -es2
@@ -8,10 +7,6 @@
 -workdir=.hbmk/${hb_compiler}
 -hbexe
 
-hbssl.hbc
-hbcurl.hbc
-
-
 ### SSL ###
 -D__SSL__
 
@@ -20,43 +15,26 @@ hbcurl.hbc
 
 app\app.prg
 app\myapi.prg
-app\fix_ssl.prg
-
-{win}-Llib\uhttpd2\mingw64
-{gcc}-Llib\uhttpd2\gcc
--luhttpds2
-
-{win}-Llib\tweb\mingw64
-{gcc}-Llib\tweb\gcc
--ltweb
-
 
 # WAPI_OutputDebugString()
-{win}-lhbwin
+-lhbwin
 -lhbct
 -lxhb
 
 
+# UT
+-Llib\uhttpd2\mingw64
+-luhttpds2
 
-### CURL Static 7.77 ###
-{win}-llibhbcurl
-{win}-llibcurl
-{win}-llibbrotlicommon-static
-{win}-llibbrotlidec-static
-{win}-llibbrotlienc-static
-{win}-llibnghttp2
-{win}-llibgsasl
-{win}-llibidn2
-{win}-llibssh2
-{win}-llibz
-{win}-llibcrypt32
-{win}-llibwldap32
-{win}-llibzstd
+-Llib\tweb\mingw64
+-ltweb
 
-### SSL Static ###
-{win}-llibcrypto
-{win}-llibhbssl
-{win}-llibssl
+# Curl 
+hbcurl.hbc
 
-
+# OpenSSL
+-lhbssl
+-lhbssls
+-llibcrypto-3-x64
+-llibssl-3-x64
 
