@@ -68,7 +68,7 @@ REQUEST __vmCountThreads
   HTTP Made Really Easy (http://www.jmarshall.com/easy/http/)
 */
 
-#define HTTPD2_VERSION     '2.3'
+#define HTTPD2_VERSION     '2.3a'
 
 #define THREAD_COUNT_PREALLOC     10
 #define THREAD_COUNT_MAX         200
@@ -209,7 +209,6 @@ CLASS UHttpd2 MODULE FRIENDLY
 
    DATA lStop
 
-
    METHOD LogAccess()
    METHOD LogError( cError )
 
@@ -236,6 +235,7 @@ METHOD New() CLASS UHttpd2
 
    ::aConfig[ 'Mount' ][ '/api' ]  := { 'action' => {| hSrv | UWebApi( hSrv, self ) }, 'method' => 'POST', 'regexp' => NIL, 'cargo' => '' }
    ::aConfig[ 'Mount' ][ '/files/*' ] := { 'action' => {| hSrv | UProcFiles( hb_DirBase() + "/files/" + hSrv[ 'path' ], .F. ) }, 'method' => 'GET,POST,PUT,DELETE,OPTIONS', 'regexp' => NIL, 'cargo' => '' }
+
 
 
    ::cPathHtml  := hb_DirBase() + 'html'
@@ -412,6 +412,7 @@ METHOD SetInfo( cKey, uValue ) CLASS UHttpd2
 METHOD Run( aConfig ) CLASS UHttpd2
 
    LOCAL hSocket, nI, aI, xValue, aThreads, nJobs, nWorkers
+   
 
    hb_default( @aConfig, {} )
 
@@ -435,16 +436,11 @@ METHOD Run( aConfig ) CLASS UHttpd2
    IF !hb_DirExists( ::cPathLog )
       hb_DirBuild( ::cPathLog )
    ENDIF
-
-   IF !hb_DirExists( ::cSessionPath )
-      hb_DirBuild( ::cSessionPath )
+   
+   IF hb_DirExists( ::cPathTmp )
+	  UFilesTmpCollector( .T. )  // Del temporally files...
    ENDIF
 
-   IF !hb_DirExists( ::cPathTmp )
-      hb_DirBuild( ::cPathTmp )
-   ENDIF
-
-   UFilesTmpCollector( .T. )  // Del temporally files...
 
    FOR EACH xValue IN aConfig
       IF ! hb_HHasKey( Self:aConfig, xValue:__enumKey ) .OR. ValType( xValue ) != ValType( Self:aConfig[ xValue:__enumKey ] )
@@ -3527,6 +3523,14 @@ STATIC FUNCTION UParseMultiPartFile( cBlock, aFiles )
    LOCAL hFile := { => }
    LOCAL oServer
    LOCAL lError := .F.
+   
+   IF !hb_DirExists( UGetServer():cPathTmp )	  
+      hb_DirBuild( UGetServer():cPathTmp )
+	  IF !hb_DirExists( UGetServer():cPathTmp )
+		   _t( "ERROR creating .tmp folder " + UGetServer():cPathTmp )
+           RETU .F.
+	  ENDIF
+   ENDIF
 
    IF nEnd > 0
 
@@ -3747,6 +3751,8 @@ STATIC FUNCTION UFilesTmpCollector( lDelAll )
    LOCAL nTime  := hb_MilliSeconds()
    LOCAL nLifeDays := UGetServer():nfiles_lifeDays
    LOCAL nI, dMaxDate
+   
+   
 
    hb_default( @lDelAll, .F. ) // .T. when start server
 

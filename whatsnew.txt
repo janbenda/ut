@@ -1,3 +1,9 @@
+Vrs. 2.3a
+=========
+* .sessions folder only will be created if you use sessions
+* .tmp folder only will be created if you use files process
+
+
 Vrs. 2.3
 ========
 * Updated libs to Harbour 3.2.0dev (r2502211016)

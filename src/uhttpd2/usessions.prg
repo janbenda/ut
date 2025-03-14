@@ -206,6 +206,9 @@ METHOD New() CLASS USessions
    ::lCrypt  := oServer:lSessionCrypt   // Default crypt session .F.
    ::cSID   := ''
 
+   IF !hb_DirExists( ::cPath )
+      hb_DirBuild( ::cPath )
+   ENDIF
 
    IF hmtxSession == NIL
       hmtxSession := hb_mutexCreate()
