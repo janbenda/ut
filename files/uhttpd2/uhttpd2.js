@@ -1,7 +1,7 @@
 /*
 **	module.....: uhttpd2.js -- module control for uhttpd2 (Harbour)
-**	version....: Front 2.4
-**  	last update: 02/01/2025
+**	version....: Front 2.4a
+**  last update: 29/03/2025
 **
 **	(c) 2022-2025 by Carles Aubia
 **
@@ -579,15 +579,23 @@ function UShoot( url, oPar, lFileUpload, fCallback, oMyOptions ) {
 	
 	// -------------------------------------------------
 		
+		if (!sessionStorage.getItem('UT_stamp')) {
+			sessionStorage.setItem('UT_stamp', 'STAMP' + Date.now().toString());
+		}
 		
+		const UT_stamp = sessionStorage.getItem('UT_stamp');		
 		
+	// -------------------------------------------------
+	
 	var oOptions = {
 					type: "POST",
 					url: cUrl, //url,
 					data: oPar,	
 					cache: false,
 					async: false, 
-					beforeSend: function() {} 
+					beforeSend: function(xhr) {						    
+						xhr.setRequestHeader('UT_stamp', UT_stamp ); // Inserta la cabecera personalizada						
+					} 
 				}
 				
 				

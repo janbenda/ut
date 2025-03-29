@@ -35,3 +35,4 @@ src/uhttpd2/uwebsocket.prg
 src/uhttpd2/ugettoken.prg
 src/uhttpd2/ujwt.prg
 src/uhttpd2/utokendata.prg
+src/uhttpd2/udatakeepalive.prg

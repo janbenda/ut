@@ -1,3 +1,10 @@
+Vrs. 2.3b
+=========
+* Add UDataKeppAlive( <bInit> ) Allows you to retrieve previously used variables during a keep-alive connection.
+By default, if the variable doesn't exist, the bInit codeblock is executed to initialize it.
+
+Example in repository examples container\datatakealive
+
 Vrs. 2.3a
 =========
 * .sessions folder only will be created if you use sessions

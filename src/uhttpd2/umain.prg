@@ -68,7 +68,7 @@ REQUEST __vmCountThreads
   HTTP Made Really Easy (http://www.jmarshall.com/easy/http/)
 */
 
-#define HTTPD2_VERSION     '2.3a'
+#define HTTPD2_VERSION     '2.3b'
 
 #define THREAD_COUNT_PREALLOC     10
 #define THREAD_COUNT_MAX         200
@@ -131,6 +131,8 @@ CLASS UHttpd2 MODULE FRIENDLY
    METHOD Route( cRoute, bAction, cMethod )
    METHOD RouteDelete( cRoute )
    METHOD SetDirFiles( cRoute )
+   METHOD SetTrace()
+   METHOD SetFolderPublic( cFolder )
    METHOD SetCertificate( PrivateKeyFilename, CertificateFilename )
    METHOD SetErrorStatus( nStatus, cPage, cAjax )
 
@@ -157,9 +159,10 @@ CLASS UHttpd2 MODULE FRIENDLY
    DATA  cSessionPrefix      INIT SESSION_PREFIX
    DATA  cSessionSeed        INIT 'UhHttPPd2@2022!'
    DATA  nSessionDuration       INIT SESSION_DURATION
-   DATA  nSessionLifeDays     INIT 3
-   DATA  nSessionGarbage     INIT 1000
-   DATA  lSessionCrypt      INIT .F.
+   DATA  nSessionLifeDays     	INIT 3
+   DATA  nSessionGarbage     	INIT 1000
+   DATA  lSessionCrypt      	INIT .F.
+   DATA  lTrace      			INIT .F.
 
 
 
@@ -613,8 +616,10 @@ METHOD Run( aConfig ) CLASS UHttpd2
          IF hb_mutexQueueInfo( Self:hmtxQueue, @nWorkers, @nJobs ) .AND. ;
                Len( aThreads ) < THREAD_COUNT_MAX .AND. ;
                nJobs >= nWorkers
+
             AAdd( aThreads, hb_threadStart( HB_THREAD_INHERIT_PUBLIC, @ProcessConnection(), Self ) )
          ENDIF
+
          hb_mutexNotify( Self:hmtxQueue, hSocket )
       ENDIF
    ENDDO
@@ -637,6 +642,34 @@ METHOD Stop() CLASS UHttpd2
 
    RETURN NIL
 
+METHOD SetTrace() CLASS UHttpd2
+
+	::lTrace := .T.
+	
+	::SetFolderPublic( '.trace' )	
+
+RETU NIL 
+
+METHOD SetFolderPublic( cFolder, lIndex ) CLASS UHttpd2
+	
+	hb_default( @cFolder, '' )
+	hb_default( @lIndex, .f. )
+	
+	IF empty( cFolder ) 
+		RETU .F.
+    ENDIF
+
+	IF !hb_DirExists( cFolder )	  
+		hb_DirBuild( cFolder )
+		IF !hb_DirExists( cFolder )
+			_t( "ERROR creating " + cFolder + " folder " )
+			RETU .F.
+		ENDIF
+	ENDIF
+   
+	::SetDirFiles( cFolder, lIndex )      //	 
+
+RETU .T.
 
 METHOD LogError( cError ) CLASS UHttpd2
 
@@ -1014,7 +1047,7 @@ STATIC FUNC ProcessConnection( oServer )
             IF nLen > 0
                cRequest += Left( cBuf, nLen )
             ELSEIF nLen == 0
-               /* connection closed */
+               /* connection closed */		   
                EXIT
             ELSE
                /* nLen == -1  socket error */
@@ -1031,7 +1064,7 @@ STATIC FUNC ProcessConnection( oServer )
             ENDIF
          ENDDO
 
-         IF nLen <= 0 .OR. oServer:lStop
+         IF nLen <= 0 .OR. oServer:lStop		 
             EXIT
          ENDIF
 
@@ -1140,23 +1173,23 @@ STATIC FUNC ProcessConnection( oServer )
                IF nLen > 0
                   cRequest += Left( cBuf, nLen )
                ELSEIF nLen == 0
-                  /* connection closed */
+                  /* connection closed */				  
                   EXIT
                ELSE
                   /* nLen == -1  socket error */
                   IF nErr == HB_SOCKET_ERR_TIMEOUT
                      IF ( hb_MilliSeconds() - nTime ) > 1000 * 120 .OR. oServer:lStop
-                        oServer:Dbg( "Receive timeout => " + hb_NumToHex( hSocket ) )
+                        oServer:Dbg( "Receive timeout => " + hb_NumToHex( hSocket ) )				
                         EXIT
                      ENDIF
                   ELSE
                      oServer:Dbg( "Receive error: " + LTrim( Str( nErr ) ) + ' ' + hb_socketErrorString( nErr ) )
-                     EXIT
+			         EXIT
                   ENDIF
                ENDIF
             ENDDO
 
-            IF nLen <= 0 .OR. oServer:lStop
+            IF nLen <= 0 .OR. oServer:lStop		
                EXIT
             ENDIF
 
@@ -1227,7 +1260,7 @@ STATIC FUNC ProcessConnection( oServer )
 #ifndef NO_SSL
       hSSL := NIL
 #endif
-      oServer:Dbg( "Close connection. => " + hb_NumToHex( hSocket )  )
+      oServer:Dbg( "Close connection. => " + hb_NumToHex( hSocket )  )  
       hb_socketShutdown( hSocket )
       hb_socketClose( hSocket )
 
